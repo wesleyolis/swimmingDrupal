@@ -1,0 +1,3 @@
+This containts All the meet result information,
+With out hte implemetation of Meet Type, and also relay names and realy lead of times,
+As well as records and stanards are not include.

@@ -1,0 +1,4 @@
+name = TM4DB
+description = "TeamManager 4 Database Upload"
+version = "5.x"
+package = "Swimming"

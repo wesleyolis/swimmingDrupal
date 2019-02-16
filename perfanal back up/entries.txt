@@ -1,0 +1,17 @@
+SELECT * From(SELECT e.MtEv,E.MtEvX,e.Lo_Hi,e.Sex,e.Stroke,e.Distance,e.Fee,r.SCORE,r.Course,m.MName,m.Start
+
+
+ From (result_2006 as r inner JOIN mtevente_2006 as e on (e.Meet=166 and e.I_R='I' and r.DISTANCE = e.DISTANCE and r.STROKE=e.STROKE  and e.Sex!='F' and floor(e.Lo_Hi/100) <= '16' AND (e.Lo_Hi%100) >= '16'))
+ inner join meet_2006 as m on (r.Meet = m.Meet and m.Start >= '2006-07-21' and m.Type='OF')
+
+ Where r.NT=0 and r.I_R='I' and r.Course='L'  and r.ATHLETE = 634 
+ 
+ UNION
+ 
+ SELECT e.MtEv,E.MtEvX,e.Lo_Hi,e.Sex,e.Stroke,e.Distance,e.Fee,r.SCORE,r.Course,m.MName,m.Start
+
+
+ From (result_2006 as r inner JOIN mtevente_2006 as e on (e.Meet=166 and e.I_R='I' and r.DISTANCE = e.DISTANCE and r.STROKE=e.STROKE  and e.Sex!='F' and floor(e.Lo_Hi/100) <= '16' AND (e.Lo_Hi%100) >= '16'))
+ inner join meet_2006 as m on (r.Meet = m.Meet and m.Start >= '2006-07-21' and m.Type='OF')
+
+ Where r.NT=0 and r.I_R='I' and r.Course='S'  and r.ATHLETE = 634) as t order by MtEv,MtEvX,Score

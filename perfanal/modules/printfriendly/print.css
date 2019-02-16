@@ -1,0 +1,14 @@
+
+body {
+  padding: 5px;
+  color: #000;
+  background-color: #fffff;
+
+}
+div .tabs,div .tabs.primary{
+display:none;
+}
+
+breadcrumb. div {
+display:none!important;
+}

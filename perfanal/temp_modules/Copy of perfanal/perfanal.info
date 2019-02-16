@@ -1,0 +1,5 @@
+; $Id$
+name = "Perfanal"
+description = "Swim TM4" 
+version = "0.91"
+package = "Sport"

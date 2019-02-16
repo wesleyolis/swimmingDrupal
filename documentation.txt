@@ -1,0 +1,31 @@
+update result_2006 as u,(explain select result FROM result_2006 where I_R != 'R' and NT = 0 GROUP by athlete,course,stroke,distance) AS r
+
+SET u.RType = 1 
+
+where u.result = r.result
+
+
+
+set srank=0, nrank=0;
+set @rnk:=1, @gedid=0;
+update countsbyboth
+set srank=if(@gedid=(@gedid:=gedid), (@rnk:=@rnk+1),(@rnk:=1))
+order by gedid desc, cnt desc;
+
+set @rnk:=1, @snmid=0;
+update countsbyboth
+set nrank=if(@snmid=(@snmid:=surnameid), (@rnk:=@rnk+1),(@rnk:=1))
+order by surnameid desc, cnt desc;
+
+
+
+
+if(@score=0,10,20)
+
+Set @ath=0,@crs='1',@stk =0,@dis=0;
+
+update result_2006 as r
+
+set r.RBest = if((@ath != (@ath:= r.athlete) or @crs != (@crs:=r.COURSE) OR @stk != (@dis:=r.STROKE) OR @dis != (@dis:=r.distance)), 2,0)
+Where r.athlete = 1334
+order by r.Athlete,r.Course,r.Stroke,r.Distance,r.score

@@ -1,0 +1,2990 @@
+<?php
+
+//Main varible definitions and functions
+
+$tm4db = variable_get('perfanal_database', 'perfanal');
+
+function lsc_filter()
+{
+	$lsc = variable_get('perfanal_lsc', '');
+	return($lsc =='')?'':"And lsc='".$lsc."'";
+}
+
+//Term expansions functions
+
+//Just as a reference
+function yesno($v)
+{
+	return ($v==0)?'No':'Yes';
+}
+
+function hasvalue($a,$v)
+{
+	return (($v>0)?$a.$v:'--');
+}
+function Code_Type($v)
+{
+	$Code[0] = 'Groups';
+	$Code[1] = 'Sub Groups';
+	$Code[2] = 'School Year';
+	$Code[3] = 'Meet Type';
+	$Code[4] = 'Meet Division';
+	$Code[5] = 'WM Groups';
+	$Code[6] = 'WM Sub Groups';
+
+	return $Code[$v];	
+}
+
+function Course($w,$v){
+	$Course[0]['L'] = 'LCM';
+	$Course[0]['S'] = 'SCM';
+	$Course[1]['L'] = 'LCM 50m';
+	$Course[1]['S'] = 'SCM 25m';
+	$Course[1]['ALL'] = ' - All Courses';
+	return $Course[$w][strtoupper($v)];
+}
+
+
+function Gender($v){
+	$Gender['X'] = 'Mixed';
+	$Gender['F'] = 'Female';
+	$Gender['M'] = 'Male';
+	$Gender['FEMALE'] = 'Female';
+	$Gender['MALE'] = 'Male';
+	$Gender['MIXED'] = 'Mixed';
+	return $Gender[strtoupper($v)];
+}
+
+
+function IR($v){
+	$IR['I'] = 'Indi';
+	$IR['R'] = 'Relay';
+	$IR['L'] = 'Lead';
+	return $IR[strtoupper($v)];
+}
+
+
+function FP($v){
+	$FP['F'] = 'Final';
+	$FP['P'] = 'Prelim';
+	$FP['I'] = 'Semi-Final';
+	return $FP[strtoupper($v)];
+}
+
+function Stroke($v){
+	$Stroke = array('','Freestyle','Back','Breast','Butterfly','Medly'); 
+	return $Stroke[$v];
+}
+
+
+
+
+//Formating functions
+
+function NT($n)
+{$NT = array('','','NS','','','DQ');
+return	$NT[$n];
+}
+
+function Score($n,$s)
+{
+	$s = (NT($n) =='')?get_time($s):'<small>'.NT($n).get_time($s).'</small>';
+	return $s;
+};
+
+function get_time ($Score)
+{
+	if($Score==0)
+	return ' &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--';
+	else
+	{$split = substr($Score, strlen($Score)-2, 2);
+	$seconds = substr($Score, 0, strlen($Score)-2);
+	return Date('i:s', $seconds).'.'.$split;}	
+}
+
+
+function Age($Ag)
+{
+	return ($Ag=='*')?'*':(($Ag>99)?LO_HI(floor($Ag/100),$Ag%100):LO_HI(0,$Ag));//(($Ag==99)?'Open':$Ag.'yrs'));
+}
+
+function LO_HI($Lo,$Hi){
+	return ($Lo>=$Hi)?$Hi.'yrs':(($Lo>0&$Hi<99)?$Lo.'-'.$Hi:(($Lo==0&$Hi==99)?'Open':(($Hi==99)?$Lo.' & Over':$Hi.' & Under')));
+}
+
+//Not to self change date formatting to corisponed with drupal date formate.
+function get_date($v){
+	
+	$start_date = explode("-", $v);
+	return ($v==null)?'-':(($v=='0000-00-00 00:00:00')?'--': Date('d/m/Y', mktime(0, 0, 0, $start_date[1], $start_date[2], $start_date[0])));
+}
+
+
+
+/*
+function get_time ($Score)
+{if($Score==0)
+{return '';}
+else
+{$t=($Score<1000)?('0'.($Score/100)):(($Score<6000)?($Score/100):($Score%100));
+if($Score>6000)
+{$s = (($Score-$t)%6000)/100;
+$m = ($Score-$t-($s*100))/6000;
+$s=($s<10)?'0'.$s:$s;
+$m=($m<10)?'0'.$m:$m;
+$t=($t%10)?'0'.$t:$t;
+$t = $m.':'.$s.'.'.$t;}
+return $t;
+}};*/
+
+
+
+//Original Coding
+
+
+//Adition parameter filtering for TM2/4
+
+function highlight_js ($url)
+{
+ return "<script language='javascript'><!--\nvar ref='".$url."';\nfunction g(url){parent.location=(ref & url);}\n function o(row){document.getElementById(row).style.background  ='#6699FF';try{document.getElementById(row).style.cursor = 'pointer';}catch(eOldIEVersion){document.getElementById(row).style.cursor = 'hand';}\n function t(row){document.getElementById(row).style.background ='';}\n//-->\n</script>";
+
+}
+
+class  get_add_params
+{
+	function get_add_params($t)
+	{
+		return $t;
+	}
+}
+
+
+
+function sort_by($array,  $keyname = null, $sortby)
+{
+	$myarray = $inarray = array();   
+	foreach ($array as $i => $befree)
+	{
+		$myarray[$i] = $array[$i][$keyname];
+	}
+	
+	switch ($sortby)
+	{
+		case 'asc': asort($myarray);
+		 break;
+		case 'arsort': arsort($myarray);
+		 break;
+		case 'natcasesor': natcasesort($myarray);
+		 break;
+	}
+	
+	foreach ( $myarray as $key=> $befree)
+	{
+		$inarray[$key] = $array[$key];
+	}
+	
+	return $inarray;
+}
+
+function perfanal_help($section)
+{
+	switch($section)
+	{
+		case 'admin/modules#description':
+		{
+			return t('Performance Analysis based on Team Manager 4');
+		} break;
+	}
+}
+
+function perfanal_perm()
+{
+	return array('access performance analysis', 'admin performance analysis');
+}
+
+function perfanal_menu($may_cache)
+{
+	$items = array();
+	
+	if (!$may_cache)
+	{
+		
+		$items[] = array('path' => 'meets',
+				 'title' => t('Meets'),
+				 'callback' => 'perfanal_meets',
+				 'access' => user_access('access performance analysis'),
+				 'weight' => 0);
+		
+		$items[] = array('path' => 'ranking',
+				 'title' => t('Rankings'),
+				 'callback' => 'perfanal_ranking',
+				 'access' => user_access('access performance analysis'),
+				 'weight' => 0);
+
+		$items[] = array('path' => 'swimmers_results',
+				 'title' => t('swimmers results/graphs'),
+				 'callback' => 'perfanal_swimmers_results',
+				 'access' => user_access('access performance analysis'),
+				 'weight' => 1);
+				 
+		$items[] = array('path' => 'rankings',
+				 'title' => t("andre's rankings"),
+				 'callback' => 'perfanal_rankings',
+				 'access' => user_access('access performance analysis'),
+				 'weight' => 2);
+				 
+		$items[] = array('path' => 'records',
+				 'title' => t('records'),
+				 'callback' => 'perfanal_records',
+				 'access' => user_access('access performance analysis'),
+				 'weight' => 3);
+		$items[] = array('path' => 'fina',
+				 'title' => t('Fina Points'),
+				 'callback' => 'perfanal_fina',
+				 'access' => user_access('access performance analysis'),
+				 'weight' => 4);
+		
+				 
+		$items[] = array('path' => 'optimize',
+				 'title' => t('Optimize SWIM DB'),
+				 'callback' => 'perfanal_optimize',
+				 'access' => user_access('admin performance analysis'),
+				 'weight' => 5);
+		$items[] = array('path' => 'test',
+				 'title' => t('Testing rank'),
+				 'callback' => 'perfanal_test',
+				 'access' => user_access('admin performance analysis'),
+				 'weight' => 6);
+	}
+	
+	return $items;
+}
+
+/* module settings
+******************************************************************************************/
+
+function perfanal_settings()
+{
+	$edit = $_POST["edit"];
+	drupal_set_title('performance analysis');
+
+	switch($_POST["op"])
+	{
+		case t('Save configuration'):
+		{
+			variable_set('perfanal_database', $edit["database"]);
+			variable_set('perfanal_ranking_update', $edit["ranking_update"]);
+			variable_set('perfanal_ranking_period', $edit["ranking_period"]);
+			variable_set('perfanal_ranking_fina', $edit["ranking_fina"]);
+			variable_set('perfanaldisplay_breakers', $edit["display_breakers"]);
+			variable_set('perfanal_min_display', $edit["min_display"]);
+			variable_set('perfanal_lsc', $edit["lsc"]);
+		} break;
+		
+		case t('Reset to defaults'):
+		{
+			variable_set('perfanal_database', 'perfanal');
+			variable_set('perfanal_ranking_update', 'W');
+			variable_set('perfanal_ranking_period', '2');
+			variable_set('perfanal_ranking_fina', '2004');
+			variable_set('perfanal_display_breakers', '20');
+			variable_set('perfanal_min_display', '20');
+			variable_set('perfanal_lsc', '');
+			
+		} break;
+		
+		default:
+		{	
+			$form['season_start']['start_dd'] = array('#type' => 'textfield', '#size' => 40, '#max_length' => 40,
+				'#default_value' => variable_get('perfanal_database', 'perfanal'), '#title' => t('Database'));
+			
+			$form['season_start']['start_mm'] = array('#type' => 'textfield', '#size' => 40, '#max_length' => 40,
+				'#default_value' => variable_get('perfanal_database', 'perfanal'));
+			
+			
+			
+			
+			
+			
+			$form['database'] = array('#type' => 'textfield', '#size' => 40, '#max_length' => 40,
+				'#default_value' => variable_get('perfanal_database', 'perfanal'), '#title' => t('Database'),
+				'#description' => t('Specify the name of the database to be used in prefixing all calls to the performance analysis tables.'));
+			
+			$form['ranking_update'] = array('#title'=>'Rankings Update','#type' => 'select', '#options' => Array('M'=>'Monthly','W'=>'Weekly'), '#default_value' => variable_get('perfanal_ranking_update', 'W'));
+			
+			$form['ranking_period'] = array('#type' => 'textfield', '#size' => 5, '#max_length' => 1,
+				'#default_value' => variable_get('perfanal_ranking_period', '2'), '#title' => t('Weekly Period'),
+				'#description' => t('Weekly Period to update rankings,does not affect Monthly thought'));
+				$result = db_query("SELECT DISTINCT Years From {fina_points}");
+				
+			for($i=0;$object = db_fetch_object($result);$i++)
+			$rows[$i] = $object->Years;
+			$form['ranking_fina'] = array('#title'=>'Rankings Fina, Base Times of year','#type' => 'select', '#options' => $rows, '#default_value' => variable_get('perfanal_ranking_fina', '2004'));
+			
+				//$form['club'] = array('#type' => 'select', '#options' => $club_list, '#default_value' => arg(2));
+			
+			$form['display_breakers'] = array('#type' => 'textfield', '#size' => 5, '#max_length' => 2,
+				'#default_value' => variable_get('perfanal_display_breakers', '20'), '#title' => t('Records Breakers'),
+				'#description' => t('Specify the number of days ago, that records will be classified as broken and promoted to front page. '));
+				
+			
+			$form['min_display'] = array('#type' => 'textfield', '#size' => 5, '#max_length' => 3,
+				'#default_value' => variable_get('perfanal_min_display', '20'), '#title' => t('Minimum Display'),
+				'#description' => t('Specify the minimum about of (results/events) to display on a page. 0 to disable.'));
+			
+			$form['lsc'] = array('#type' => 'textfield', '#size' => 5, '#max_length' => 3,
+				'#default_value' => variable_get('perfanal_lsc', ''), '#title' => t('LSC Filter'),
+				'#description' => t('Specify the defalt LSC Filter to be used'));
+		
+		} break;
+	}
+	
+	return $form;
+}
+
+function theme_settings($form)
+{
+	$output = '<table border="0" cellspacing="0" cellpadding="0" width="100%">';
+	$output.= '<tr>';
+	$output.= '<td>'.form_render($form['season_start']['start_dd']).form_render($form['season_start']['start_mm']);
+	$output.= '</td>';
+	$output.= '</tr>';
+	$output.= '<tr>';
+	$output.= '<td>'.form_render($form['season_end']);
+	$output.= '</td>';
+	$output.= '</tr>';
+	$output.= '</table>';
+
+	
+	return $output;
+}
+
+
+/* helper functions
+******************************************************************************************/
+
+function extract_seasons()
+{
+	$tm4db = variable_get('perfanal_database', 'perfanal');
+	$result = db_query("show tables from ".$tm4db." like 'athinfo_%'");
+		
+	while ($row_data = mysql_fetch_array($result))
+	{
+		$year = substr($row_data[0], strlen($row_data[0])-4, 4);
+		if ($year != "")
+		{
+			$nyear = ($year+1);
+			$season = $year.'/'.substr($nyear, 2, 2);
+			$seasons[$year] = $season;
+		}
+	}
+
+	$seasons = array_reverse($seasons, true);
+	
+	return $seasons;
+}
+
+/* gala results
+******************************************************************************************/
+
+function perfanal_optimize()
+{
+	$seasons = extract_seasons();
+	$tm4db = variable_get('perfanal_database', 'perfanal');
+	if (!$season)
+	{
+		$rev_seasons = array_reverse($seasons, true);
+		foreach ($rev_seasons as $key => $value)
+			$season = $key;
+	}
+	$output='';
+	//Adding the indecies to the database
+	//ADD {INDEX|KEY} [index_name] [index_type] (index_col_name,...)
+
+	/*
+	$query = "ALTER TABLE ".$tm4db.".athlete_".$season." ADD PRIMARY KEY (Athlete);";
+	$result = db_query($query);
+	$output.= "Index on Athelte";
+	CREATE INDEX id_index USING BTREE ON lookup (id);
+
+	$query = "ALTER TABLE ".$tm4db.".athlete_".$season." ADD PRIMARY KEY (Athlete);";
+	$result = db_query($query);
+	$output.= "Index on Athelte";*/
+	
+	//Doing some admin work,formating	
+	$query = "UPDATE ".$tm4db.".athlete_".$season." SET Last = TRIM(CONCAT(UCase(LEFT(Last,1)),LCase(SUBSTRING(Last,2))))";
+	$result = db_query($query);
+	$output.= "Formating Last Name<br>";
+	
+	$query = "UPDATE ".$tm4db.".athlete_".$season." SET FIRST = TRIM(CONCAT(UCase(LEFT(FIRST,1)),LCase(SUBSTRING(FIRST,2))))"; 
+	
+	$result = db_query($query);
+	$output.= "Formating First Name<br>";
+	
+	$query = "Update ".$tm4db.".mtevent_".$season." AS upe,"; 
+	$query .=" (Select e.MTEVENT AS event,a.sex AS sex, Count(DISTINCT a.sex) as cnt From  ".$tm4db.".mtevent_".$season." as e Cross JOIN ".$tm4db.".result_".$season." as r"; 
+	$query .=" on e.MtEvent=r.MTEVENT Cross JOIN ".$tm4db.".athlete_".$season." as a on r.ATHLETE=a.Athlete WHERE e.Sex ='X' and e.MtEvX <>'' "; 
+	$query .=" Group By e.MTEVENT) As es SET upe.Sex=es.sex"; 
+	$query .=" WHERE es.cnt=1 and upe.MtEvent=es.event"; 
+	$result = db_query($query);
+	
+	$output.= "Gender problem with Mixed<br>";
+	
+	$query = "Update ".$tm4db.".mtevent_".$season." as e, (Select MTEVENT, Count(*) AS results From ".$tm4db.".result_".$season." WHERE I_R <> 'L' Group By MTEVENT) as r";
+	$query .= " SET e.results = r.results";
+	$query .= " Where e.MtEvent=r.MTEVENT";
+	$output.= "result counts<br>";
+	
+	$output.= "Reseting Best Time Rank<br>";
+	$result = db_query("Update ".$tm4db.".result_".$season."  as p Set p.RBest = 0");
+	$output.= "Reranking Best Time Rank<br>";
+	$query = "Update ".$tm4db.".result_".$season." as up,(select Min(rs.Score),rs.result From (Select r.athlete,r.course,r.stroke,r.distance,r.score,r.result From ".$tm4db.".result_".$season." as r";
+	$query.= " Where r.I_R='I' and r.NT=0 order by r.athlete,r.course,r.stroke,r.distance,r.score) as rs";
+	$query.= " Group by rs.athlete,rs.course,rs.stroke,rs.distance) as res";
+	$query.= " Set up.RBest = 1 WHERE up.result=res.result";
+	$output.=$query;
+	$result = db_query($query);
+
+	
+	return $output;
+}
+
+function perfanal_records()
+{
+	$edit = $_POST["edit"];
+	$seasons = extract_seasons();
+	$tm4db = variable_get('perfanal_database', 'perfanal');
+	$min_display = variable_get('perfanal_min_display', '20');
+	/*
+	switch($_POST["op"])
+	{
+		case t('load'):
+		{
+			drupal_goto('gala_results/'.$edit['season']);
+		} break;
+		
+		default:
+		{
+			$form['season'] = array('#type' => 'select', '#options' => $seasons, '#default_value' => arg(1));
+			$form['submit'] = array('#type' => 'submit', '#value' => t('load'));
+			
+			$output = drupal_get_form('gala_results', $form);
+		} break;
+	}*/
+	
+	$season = (($edit["season"]) ? $edit["season"] : '');
+	if (!$season)
+	{
+		$rev_seasons = array_reverse($seasons, true);
+		foreach ($rev_seasons as $key => $value)
+			$season = $key;
+	}
+	switch(arg(1))
+	{
+		case 'age':
+		{
+			$results = db_query("Select * From ".$tm4db.".recname_".$season." Where Record=".arg(2));
+			$object = db_fetch_object($results);
+			drupal_set_title($object->RecFile.' Records &nbsp;&nbsp;'.Age(arg(3)));
+			
+			$headers[] = array('data' => t('Time'), 'width' => '70px');
+			$headers[] = array('data' => t('Dis'), 'width' => '30px');
+			$headers[] = array('data' => t('Stroke'), 'width' => '70px');
+			$headers[] = array('data' => t('I/R'), 'width' => '20px');
+			$headers[] = array('data' => t('Holder'), 'width' => '400px');
+			$headers[] = array('data' => t('Date'), 'width' => '80px');
+			$headers[] = array('data' => t('Team'), 'width' => '70px');
+			$headers[] = array('data' => t('Ex'), 'width' => '20px');
+			//$headers[] = array('data' => t('Div'), 'width' => '20px');
+			
+			$results = db_query("SELECT *, 0 as highlight from ".$tm4db.".records_".$season." Where record=".arg(2)." and Lo_Age =".floor((arg(3)/100))." and Hi_Age =".(arg(3)%100)."  Order by Course,Sex,I_R,Stroke,Distance");
+				
+			//Grouping
+			$Gender=null;
+			$Course=null;
+			
+			while($object = db_fetch_object($results))
+			{
+				if($Gender <> $object->Sex ||$Course <> $object->Course )
+				{
+					$Gender = $object->Sex;
+					$Course = $object->Course;
+					if($rows !=NULL)                     
+					$output.= theme('table', $headers, $rows).'<br>';
+					$output.= '<p align=\'center\'><b>'.t(Course(1,$object->Course).' - '.Gender($object->Sex)).'</b></p>';
+					$rows = NULL;
+				}
+			
+				$rows[] = array(get_time($object->RecTime),$object->Distance,Stroke($object->Stroke),$object->I_R,$object->RecText,get_date($object->RecDate),$object->RecLSC.'-'.$object->RecTeam,$object->Ex);//,$object->Division);
+			}
+			 $output.=theme('table', $headers, $rows);	
+			return $output;	
+		}
+		break;
+		
+		case 'ages':
+		{
+			$results = db_query("Select * From ".$tm4db.".recname_".$season." Where Record=".arg(2));
+			$object = db_fetch_object($results);
+			drupal_set_title($object->RecFile." Records");
+			
+			$headers[] = array('data' => t('Age Group'), 'width' => '120px');
+			
+			$results = db_query("Select distinct ((Lo_Age*100)+Hi_Age) as Age From ".$tm4db.".records_".$season." Where Record=".arg(2)." ORDER by Lo_Age,Hi_Age");
+			if(db_num_rows($results)==1)
+			{
+				$object = db_fetch_object($results);
+				drupal_goto('records/age/'.arg(2).'/'.$object->Age);
+			}
+			while($object = db_fetch_object($results))
+			$rows[] = array(l(Age($object->Age),'records/age/'.arg(2).'/'.$object->Age));
+	
+			return theme('table', $headers, $rows);	
+				
+		}
+		break;
+		
+		default:
+		{
+			drupal_set_title("Records");
+			
+			$headers[] = array('data' => t('Name'), 'width' => '80px');
+			$headers[] = array('data' => t('Description'), 'width' => '150px');
+			$headers[] = array('data' => t('Course'), 'width' => '80px');
+			$headers[] = array('data' => t('Year'), 'width' => '40px');
+			$headers[] = array('data' => t('Flag'), 'width' => '30px');
+			
+			$results = db_query("Select * From ".$tm4db.".recname_".$season." Order BY Year desc, Course");
+						
+			while($object = db_fetch_object($results))
+			$rows[] = array(l($object->RecFile,'records/ages/'.$object->Record),$object->Descript,Course(1,$object->Course),$object->Year,$object->Flag);
+			
+			return theme('table', $headers, $rows);	
+		}break;
+	}
+}
+
+function perfanal_fina()
+{
+	switch(arg(1))
+	{
+		case 'about':
+		{
+			$output.="<div class='tabs'><ul class='tabs primary'>";
+			$output.="<li class='active'>".l('About','fina/about')."</li>";
+			$output.=" <li>".l('Base Times','fina')."</li>";
+			$output.="</ul></div>";
+			
+			return $output.'infmation on how fina point system works';	
+		}
+		break;
+		
+		case 'base_times':
+		{
+			drupal_set_title("Fina ".arg(2)." ".((arg(3)!='ALL')?Course(1,arg(3))." ":'')."Base Times");
+			
+			
+			
+			$headers [] = array('date'=>t('Distance'),'width'=>'60px');
+			$headers [] = array('date'=>t('Stroke'),'width'=>'60px');
+			$headers [] = array('date'=>t('Base Time'),'width'=>'60px');
+			
+			$results = db_query("Select * From {fina_points} Where Years=".arg(2).((arg(3)!='ALL')?" and Course='".arg(3)."'":'')." and I_R='I' order by Course, I_R,Sex,Stroke,distance");
+						
+			$output.="<table cellpadding='5px' ><tr>";
+			$course = null;
+			$Gender =null;
+			while($object = db_fetch_object($results))
+			{
+				if($course != $object->Course)
+				{
+					$course = $object->Course;
+					if($rows !=null)
+					{
+					$output.=theme('table',$headers,$rows).'</td>';
+					$output.="</tr></table>";
+					$output.="<table cellpadding='5px' ><tr>";
+					}
+					$output.= "<td colspan='2' align='center' class='title'><small>".Course(1,$object->Course)."</small></td></tr><tr>";
+					
+					$rows=null;
+				}
+					
+				if($gender != $object->Sex)
+				{
+					$gender = $object->Sex;
+					if($rows !=null)
+					$output.=theme('table',$headers,$rows).'</td>';
+					$rows=null;
+					$output.= "<td><p class='title'><small>".Gender($object->Sex)."</small></p>";
+				}
+				
+				$rows[] = array($object->Distance.'m',Stroke($object->Stroke),get_time($object->Score));
+			}
+			
+			$output.=theme('table',$headers,$rows,array('align'=>'right'));
+			$output.="</tr></table>";
+			return $output;
+		}
+		break;
+		
+		default:
+		{
+			drupal_set_title("Fina Base Times");
+			
+			$output.="<div class='tabs'><ul class='tabs primary'>";
+			$output.="<li>".l('About','fina/about')."</li>";
+			$output.=" <li class='active'>".l('Base Times','fina')."</li>";
+			$output.="</ul></div>";
+			
+			$output.="<br/>Please make a selection<br/><br/>";
+			
+			$headers[] = array('data'=>t('Years - Course'), 'width'=>'120px');
+			
+			$results = db_query("Select DISTINCT Years,Course From {fina_points}");
+			
+			while($object = db_fetch_object($results)){
+			$rows[] = array(l($object->Years.' - '.Course(1,$object->Course),'fina/base_times/'.$object->Years.'/'.$object->Course));}
+			$output.=theme('table',$headers,$rows);
+					
+			return $output;
+		}
+		break;
+	}
+}
+
+function Meet_Type_Table($url,$tm4db,$season)
+{
+	$headers[] = array('data' => t('Abbr'), 'width' => '40px');
+	$headers[] = array('data' => t('Description'), 'width' => '150px');
+		
+	$results = db_query("Select * From ".$tm4db.".code_".$season." Where TYPE=3");
+				
+	$rows[] = array(l('ALL',$url.'/ALL'),' Un Offical');
+	while($object = db_fetch_object($results))
+	if($object->ABBR !=null)
+	$rows[] = array(l($object->ABBR,$url.'/'.$object->ABBR),$object->DESC);
+	
+	return theme('table', $headers, $rows);	
+}
+
+function rank_score($tm4db,$season,$Where)  // Points Rankings Function
+{
+	$headers[] = array('data' => t('#'), 'width' => '20px');
+	$headers[] = array('data' => t('Time'), 'width' => '60px');
+	$headers[] = array('data' => t('Athlete Name'), 'width' => '250px');
+	$headers[] = array('data' => t('M/F'), 'width' => '30px');
+	$headers[] = array('data' => t('Age'), 'width' => '30px');
+	$headers[] = array('data' => t('Team'), 'width' => '80px');
+	$headers[] = array('data' => t('Meet'));
+	
+	
+	
+	$query="Select m.Meet,m.MName,a.Athlete, a.Last, a.First, a.Sex, a.age, r.SCORE, t.TCode, t.LSC, r.Age as sage";
+	$query.=" FROM (((swimdb.result_2006 as r left join swimdb.athlete_2006 as a on (r.ATHLETE=a.Athlete)) left JOIN swimdb.team_2006 as t on (r.Team=t.Team) ) left join swimdb.meet_2006 as m on (r.Meet=m.Meet))";
+	$query.=" WHERE t.LSC='WP' and r.RAll=True and a._Group='A' and ".$Where." order by r.Score";
+	
+	/*
+	
+	//No pre-ranking needed
+	$query = "Select *, MIN(res.Score) as mins FROM"; 
+	$query.= "(Select m.Meet,m.MName,a.Athlete, a.Last, a.First, a.Sex, a.age, r.SCORE, t.TCode, t.LSC, r.Age as sage";
+	$query.= " FROM (((".$tm4db.".result_".$season." as r left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left JOIN ".$tm4db.".team_".$season." as t on (r.Team=t.Team) ) left join ".$tm4db.".meet_".$season." as m on (r.Meet=m.Meet)) ";
+	$query.= " WHERE r.I_R='I' and a.Athlete > 0 and r.NT=0 and ".$Where; // a.age >=15 and a.age <=16 and r.COURSE='L' and a.Sex='F'and r.Stroke=1 and r.Distance=50 and r.NT=0 and (DATEDIFF(m.Start,'".$season."-12-24') <=0)";
+	$query.= " order by  r.Athlete, r.Score)";
+	$query.= " as res GROUP by res.Athlete order by  res.Score";*/
+	
+	//$query="Select *, MIN(res.Score) as mins FROM (Select r.Meet,r.athlete,a.Last,a.First,r.result,r.Distance,r.Stroke,r.Course,r.NT,r.Score FROM ((swimdb.result_".$season." as r left join swimdb.athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left join swimdb.meet_".$season." as m on (r.Meet=m.Meet)) WHERE a.age >=15 and a.age <=16 and r.COURSE='L' and a.Sex='F'and r.Stroke=1 and r.Distance=50 and r.NT=0 order by  r.Athlete, r.Score) as res GROUP by res.Athlete";
+	$output.=$query;
+	$result = db_query($query);
+	//$output.=$query;
+	$pos = 0;
+	$pos2 = -1;
+	$point=NULL;
+	//Grouping
+	$First = false;
+	while ($object = db_fetch_object($result))
+	{
+
+		if($point != $object->SCORE)
+		{	
+			$point = $object->SCORE;
+			$pos++;
+		}
+		$rows[] = array((($pos ==$pos2)?'-':$pos),get_time($object->SCORE),( ($object->Last==NULL)?'Athlete not found':l(t($object->Last.", ".$object->First), $link)), $object->Sex, $object->age, $object->TCode."-".$object->LSC,l($object->MName,'meets/info/'.$object->Meet));
+		if($pos != pos2)
+		$pos2 = $pos;
+	}
+	if (!$rows)
+	{
+		$rows[] = array(array('data' => t('There are no athletes results found matching your criteria, click '.l(t('here'), 'ranking/'.arg(1).'/'.arg(2).'/'.arg(3)).' to go back.'), 'colspan' => 7));
+	}
+	$output.= theme('table', $headers, $rows);
+	return $output;
+}
+
+function rank_fina($tm4db,$season,$Where)  // Points Rankings Function
+{
+	$sort = (arg(8)==null)?0:arg(8);
+	$url = 'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/'.arg(6).'/'.arg(7);
+	
+	$header[] = array('data' => ($sort==0)?t('Avg'):l(t('Avg'),$url), 'width' => '40px');
+	$header[] = array('data' => ($sort==1)?t('Total'):l(t('Total'),$url.'/1'), 'width' => '40px');
+	$header[] = array('data' => ($sort==2)?t('Min'):l(t('Min'),$url.'/2'), 'width' => '40px');
+	$header[] = array('data' => ($sort==3)?t('Max'):l(t('Max'),$url.'/3'), 'width' => '40px');
+	
+	$headers[] = array('data' => t('#'), 'width' => '40px');
+	$headers[] = $header[$sort]; 
+	$headers[] = array('data' => t('Athlete Name'), 'width' => '250px');
+	$headers[] = array('data' => t('M/F'), 'width' => '30px');
+	$headers[] = array('data' => t('Age'), 'width' => '30px');
+	$headers[] = array('data' => t('Team'), 'width' => '80px');
+	$headers[] = array('data' => t('Events'), 'width' => '40px');
+	for($i=0;$i<4;$i++)
+	if($i!=$sort)
+	{
+		$headers[] = $header[$i];
+		$fields[] = 'f'.$i;
+	}
+	
+	//$headers[] = array('data' => t('Meet'));
+	
+	
+	$query = "SELECT *,min(res.fina) as f3,max(res.fina) as f2,Round(avg(res.fina)) as f0, Count(*) as events, Sum(res.fina) as f1 from (select r.stroke,r.distance,Max(r.fina) as fina,a.Athlete, a.Last, a.First, a.Sex, a.age, r.SCORE, t.TCode, t.LSC, r.Age as sage FROM (((".$tm4db.".result_".$season." as r left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left JOIN ".$tm4db.".team_".$season." as t on (r.Team=t.Team) ) left join ".$tm4db.".meet_".$season." as m on (r.Meet=m.Meet)) WHERE r.I_R='I' and a.Athlete > 0 and r.TRANK>0 and "; 
+	$query.= $Where." Group by r.Athlete,r.Course,r.stroke,r.distance ) as  res group by res.Athlete order by f".$sort." desc";
+	
+	/*
+	$query = "SELECT *,min(res.fina) as fina_min,max(res.fina) as fina_max,Round(avg(res.fina)) as fina_avg, Count(*) as events, Sum(res.fina) as fina2 from (select r.stroke,r.distance,Max(r.fina) as fina,a.Athlete, a.Last, a.First, a.Sex, a.age, r.SCORE, t.TCode, t.LSC, r.Age as sage FROM (((".$tm4db.".result_".$season." as r left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left JOIN ".$tm4db.".team_".$season." as t on (r.Team=t.Team) ) left join ".$tm4db.".meet_".$season." as m on (r.Meet=m.Meet)) WHERE r.I_R='I' and a.Athlete > 0 and r.TRANK>0 and "; 
+	$query.= $Where." Group by r.Athlete,r.Course,r.stroke,r.distance ) as  res group by res.Athlete order by fina_avg desc";
+	*/
+	
+	/*
+	$query = "Select *, Max(res.fina) as mins FROM"; 
+	$query.= "(Select Round(1000*Pow(f.Score/r.Score,3)) as fina, m.Meet,m.MName,a.Athlete, a.Last, a.First, a.Sex, a.age, r.SCORE, t.TCode, t.LSC, r.Age as sage";
+	$query.= " FROM (((".$tm4db.".result_".$season." as r left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left JOIN ".$tm4db.".team_".$season." as t on (r.Team=t.Team) ) left join ".$tm4db.".meet_".$season." as m on (r.Meet=m.Meet))  inner join {fina_points} as f on (r.Course=f.Course and r.I_R=f.I_R and r.Stroke=f.Stroke and r.Distance=f.Distance and a.sex=f.Sex) ";
+	$query.= " WHERE r.I_R='I' and a.Athlete > 0 and r.NT=0 and ".$Where; // a.age >=15 and a.age <=16 and r.COURSE='L' and a.Sex='F'and r.Stroke=1 and r.Distance=50 and r.NT=0 and (DATEDIFF(m.Start,'2006-12-24') <=0)";
+	$query.= " order by  r.Athlete, r.Score)";
+	$query.= " as res GROUP by res.Athlete order by res.fina desc";*/
+	
+	//$output.=$query;
+	$result = db_query($query);
+	//$output.=$query;
+	$pos = 0;
+	$pos2 = -1;
+	$point=NULL;
+	//Grouping
+	$First = false;
+	while ($object = db_fetch_array($result))
+	{
+
+		if($point != $object['f'.$sort])
+		{	
+			$point = $object['f'.$sort];
+			$pos++;
+		}
+		$rows[] = array((($pos ==$pos2)?'-':$pos),$object['f'.$sort],( ($object['Last']==NULL)?'Athlete not found':l(t($object['Last'].", ".$object['First']), $link)), $object['Sex'], $object['age'], $object['TCode'].'-'.$object['LSC'],$object['events'],$object[$fields[0]],$object[$fields[1]],$object[$fields[2]]);
+		if($pos != pos2)
+		$pos2 = $pos;
+	}
+	/*
+	while ($object = db_fetch_object($result))
+	{
+
+		if($point != $object->SCORE)
+		{	
+			$point = $object->SCORE;
+			$pos++;
+		}
+		$rows[] = array((($pos ==$pos2)?'-':$pos),$object->fina_avg,( ($object->Last==NULL)?'Athlete not found':l(t($object->Last.", ".$object->First), $link)), $object->Sex, $object->age, $object->TCode."-".$object->LSC,$object->fina2,$object->events,$object->fina_min,$object->fina_max);
+		if($pos != pos2)
+		$pos2 = $pos;
+	}*/
+	if (!$rows)
+	{
+		$rows[] = array(array('data' => t('There are no athletes results found matching your criteria, click '.l(t('here'), 'ranking/'.arg(1).'/'.arg(2).'/'.arg(3)).' to go back.'), 'colspan' => 7));
+	}
+	$output.= theme('table', $headers, $rows);
+	return $output;
+}
+
+function Indi_Points2($tm4db,$season,$Where)  // Points Rankings Function
+{
+	$headers[] = array('data' => t('#'), 'width' => '20px');
+	$headers[] = array('data' => t('Score'), 'width' => '60px');
+	$headers[] = array('data' => t('Athlete Name'), 'width' => '250px');
+	$headers[] = array('data' => t('M/F'), 'width' => '30px');
+	$headers[] = array('data' => t('Age'), 'width' => '40px');
+	$headers[] = array('data' => t('Team'), 'width' => '80px');
+	
+	$query = "select a.Athlete, a.Last, a.First, a.Sex, a.age, (sum(r.POINTS)/10) as Sum_Points, t.TCode, t.LSC from ";
+	$query.=" ((".$tm4db.".Meet_".$season." as m left join ".$tm4db.".result_".$season." as r on (m.Meet=r.MEET))left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE= a.Athlete)) left join ".$tm4db.".team_".$season." as t on (r.TEAM=t.Team)";
+	$query.=" Where ".$Where." and r.I_R='I' and a.Athlete>0 GROUP BY  r.ATHLETE having Sum(r.POINTS)>0 order by Sum_Points DESC,a.last";
+	//$output.=$query;
+	$result = db_query($query);
+	//$output.=$query;
+	$pos = 0;
+	$pos2 = -1;
+	$point=NULL;
+	//Grouping
+	$First = false;
+	while ($object = db_fetch_object($result))
+	{
+		if($Age != $object->Lo_Hi)
+		{
+			$Age = $object->Lo_Hi;
+			$pos = 0;
+		}
+		if($point != $object->Sum_Points)
+		{	
+			$point = $object->Sum_Points;
+			$pos++;
+		}
+		$rows[] = array((($pos ==$pos2)?'-':$pos),$object->Sum_Points,( ($object->Last==NULL)?'Athlete not found':l(t($object->Last.", ".$object->First), $link)), $object->Sex, $object->age, $object->TCode."-".$object->LSC);
+		if($pos != pos2)
+		$pos2 = $pos;
+	}
+	if (!$rows)
+	{
+		$rows[] = array(array('data' => t('There are no athletes results found matching your criteria, click '.l(t('here'), 'ranking/'.arg(1).'/'.arg(2).'/'.arg(3)).' to go back.'), 'colspan' => 6));
+	}
+	$output.= theme('table', $headers, $rows);
+	return $output;
+}
+
+function team_points($tm4db,$season,$Where)
+{
+	$headers[] = array('data' => t('#'), 'width' => '20px');
+	$headers[] = array('data' => t('Score'), 'width' => '60px');
+	$headers[] = array('data' => t('Team Name'), 'width' => '250px');
+	$headers[] = array('data' => t('Code'), 'width' => '80px');
+	$headers[] = array('data' => t('Athletes'), 'width' => '80px');
+	
+	$query="SELECT SUM(r.POINTS)/10 as Sum_Points,t.TName,t.TCode, t.LSC , Count(DISTINCT If(r.I_R='I',r.Athlete,0)) AS Sum_Athletes";
+	$query.=" FROM ((".$tm4db.".Meet_".$season." as m left join ".$tm4db.".result_".$season." as r on (m.Meet=r.MEET)) left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left join ".$tm4db.".team_".$season." as t on (r.TEAM=t.Team)";
+	$query.=" Where ".$Where." Group by r.Team HAVING SUM(r.POINTS)>0 Order by Sum_Points Desc";
+			
+	$result = db_query($query);
+	
+	$pos = 0;
+	$pos2 = -1;
+	$point=NULL;
+	while ($object = db_fetch_object($result))
+	{
+		if($point != $object->Sum_Points)
+		{	
+			$point = $object->Sum_Points;
+			$pos++;
+		}
+		$rows[] = array((($pos ==$pos2)?'-':$pos),$object->Sum_Points,( ($object->TName==NULL)?'Team not found':$object->TName), $object->TCode."-".$object->LSC,$object->Sum_Athletes);
+		if($pos != pos2)
+		$pos2 = $pos;
+	}
+	if (!$rows)
+	{
+		$rows[] = array(array('data' => t('There are no athletes results found matching your criteria, click '.l(t('here'), 'ranking/'.arg(1).'/'.arg(2).'/'.arg(3)).' to go back.'), 'colspan' => 5));
+	}
+	return  theme('table', $headers, $rows);	
+}
+/*
+function perfanal_test()
+{
+	
+	$result = db_query("Select r.ATHLETE,r.Course,r.stroke,r.DISTANCE, r.RESULT, r.Score from swimdb.result_2006 as r Where r.I_R='I' and r.NT=0 order by r.Athlete,r.course,r.stroke,r.distance,r.nt,r.score");
+	
+	$athlete =null;
+	$course = null;
+	$stroke = null;
+	$distance=null;
+	$score = null;
+
+	while($object = db_fetch_object($result))
+	{
+		if($athlete != $object->ATHETE || $course != $object->Course || $stroke != $object->STROKE || $distance != $object->DISTANCE )
+		{
+			$athlete = $object->ATHETE;
+			$course = $object->Course;
+			$stroke = $object->STROKE;
+			$distance = $object->DISTANCE;
+			$rank=0;
+		}
+		if($score != $object->Score)
+		$rank++;
+		
+		db_query("Update swimdb.result_2006 Set TRank=".$rank." Where result =".$object->RESULT.";");
+		
+	}
+	
+	return "update";
+
+}*/
+
+function perfanal_ranking()
+{
+	$edit = $_POST["edit"];
+	$seasons = extract_seasons();
+	$tm4db = variable_get('perfanal_database', 'perfanal');
+	$min_display = variable_get('perfanal_min_display', '20');
+	/*
+	switch($_POST["op"])
+	{
+		case t('load'):
+		{
+			drupal_goto('gala_results/'.$edit['season']);
+		} break;
+		
+		default:
+		{
+			$form['season'] = array('#type' => 'select', '#options' => $seasons, '#default_value' => arg(1));
+			$form['submit'] = array('#type' => 'submit', '#value' => t('load'));
+			
+			$output = drupal_get_form('gala_results', $form);
+		} break;
+	}*/
+	
+	$season = (($edit["season"]) ? $edit["season"] : '');
+	if (!$season)
+	{
+		$rev_seasons = array_reverse($seasons, true);
+		foreach ($rev_seasons as $key => $value)
+			$season = $key;
+	}
+	/*
+			$WeekDays = date("W");
+			$WeekDays = (($WeekDays%2)*7);
+			$days = date("N");$date->modify("+1 day");
+			$res = getDate();
+			$res = $res->modify('-'.($WeekDays+$days-1).' day');
+			$output = ' dsdsf';
+			$output.= ' '.$res;*/
+			
+	
+	
+	$type = Array('indi_points'=>'Individual Points','team_points'=>'Team Points','score'=>'Times','fina'=>'Fina');
+	
+	if(arg(1) ==null) //Rankings type
+	{
+		drupal_set_title("Please choose a Ranking Catagorie");
+		$output.='<br>'.l('Individual Points','ranking/indi_points').'<br><br>';
+		$output.=l('Team Points','ranking/team_points').'<br><br>';
+		$output.=l('Times','ranking/score').'<br><br>';
+		$output.=l('Fina','ranking/fina').'<br>Allows performance comparision accross strokes<br>and sprinters against long distance athletes.';
+		return $output;
+		
+	}else if(arg(1)=='info')
+	{
+		drupal_set_title("Rankings Information");
+		
+		$last_ranking = variable_get('perfanal_ranking_last_update', getDate());
+		$update = variable_get('perfanal_ranking_update', 'W');
+		$period = variable_get('perfanal_ranking_period', '2');
+		
+		$output.="<br/>The current rankings is ".$last_ranking.".<br/><br/>";
+		If($update=='M')
+		$output.="They are updated on a Monthly basis.<br/><br/>";
+		else
+		$output.="They are updated every ".$period." Weeks.<br/><br/>";
+		
+		$output.="Athlete's age's are determined as at the current rankings date. (".$last_ranking.")<br/>";
+		$output.="Age group filters look at the athlete's age as of the current rankings date.<br/><br/>";
+		$output.="Meet Results that are consider for rankings are up to and including current rankings date. (".$last_ranking.")<br/>";
+		$output.="To view list of meets including in this rankings set click the Meets link on rankings page.<br/>";
+
+		return t($output);
+		
+	} else if(arg(2)==null) //Meet type
+	{
+		drupal_set_title($type[arg(1)].' Rankings');
+		return  Meet_Type_Table('ranking/'.arg(1),$tm4db,$season);
+	}
+	else if(arg(3) ==null) // Course
+	{
+		drupal_set_title($type[arg(1)].' '.arg(2).' Rankings');
+		$output="<br>Pelase Select a course.<br><br>";
+		if(arg(1) =='indi_points' || arg(1) =='team_points' || arg(1) =='fina')
+		$output.=l('All Courses','ranking/'.arg(1).'/'.arg(2).'/ALL').'<br><br>';
+		$output.=l('Shot Course 25m','ranking/'.arg(1).'/'.arg(2).'/S').'<br><br>';
+		$output.=l('Long Course 50m','ranking/'.arg(1).'/'.arg(2).'/L').'<br><br>';
+		//$output.=l('Yards','ranking/'.arg(1).'/'.arg(2).'/Y').'<br><br>';
+		return $output;
+	}else if(arg(4) ==null || arg(5) ==null)//Age group and gender
+	{
+		$age_groups = Array(99,8,910,1112,1314,1516,1799);
+		drupal_set_title(arg(2).' '.Course(1,arg(3)).' '.$type[arg(1)].' Rankings');
+		$headers[] = array('data' => t('Female'), 'width' => '100px');
+		$headers[] = array('data' => t('Male'), 'width' => '100px');
+		$headers[] = array('data' => t('Mixed'), 'width' => '100px');
+		foreach($age_groups as $gp)
+		{
+		$rows[] = array(l(Age($gp),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/female/'.$gp),l(Age($gp),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/male/'.$gp),l(Age($gp),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/mixed/'.$gp));	
+		}
+		
+		$output.= theme('table', $headers, $rows);
+		return $output;
+		
+	}else{
+		
+		// Creating the rankings periods
+					
+			$last_ranking = variable_get('perfanal_ranking_last_update', getDate());
+			$update = variable_get('perfanal_ranking_update', 'W');
+			$period = variable_get('perfanal_ranking_period', '2');
+			$fina = variable_get('perfanal_ranking_fina', floor(date("Y")/4)*4);
+			$output.="fina: ".$fina;
+			if($update=='W')
+			{
+				$result = db_query("SELECT SUBDATE(CURDATE(),((WEEK(CURDATE(),1)%".$period.")*7)+ DAYOFWEEK(CURDATE())-1+IF(DAYOFWEEK(CURDATE())=1,7,0)) as dt ");
+				$object = db_fetch_object($result);
+				$rankdate = $object->dt ;
+			}else{
+				$result = db_query("SELECT LAST_DAY(SUBDATE(CURDATE(),INTERVAL 1 MONTH)) as dt");
+				$object = db_fetch_object($result);
+				$rankdate = $object->dt ;
+			}
+			
+			
+			if($last_ranking != $rankdate)
+			{	//Updates Athelte Ages
+				$query.="UPDATE ".$tm4db.".Athlete_".$season." as upa, (select a.Athlete, extract(YEAR FROM from_days(datediff('".$rankdate."', a.Birth))) as Age  From ".$tm4db.".Athlete_".$season." as a) as ath Set upa.age = ath.Age WHERE upa.Athlete = ath.Athlete";	
+				$result = db_query($query);
+				//Updates ranking order
+					//All Meet Type's
+					$result = db_query("Update ".$tm4db.".result_".$season." as p Set p.RAll = 0");
+					
+					$query="Update ".$tm4db.".result_".$season." as up,(select Min(rs.Score),rs.result From (Select straight_join r.athlete,r.course,r.stroke,r.distance,r.score,r.result From ".$tm4db.".meet_".$season." as m, ".$tm4db.".result_".$season." as r Where(DATEDIFF(m.Start,'".$rankdate."') <=0) and (m.Meet = r.Meet) and r.I_R='I' and r.NT=0 order by r.athlete,r.course,r.stroke,r.distance,r.score) as rs Group by rs.athlete,rs.course,rs.stroke,rs.distance) as res";
+					$query.=" Set up.RAll = 1 WHERE up.result=res.result";
+					$result = db_query($query);
+					//Meet Type Groups
+					$result = db_query("Update ".$tm4db.".result_".$season." as p Set p.RType = 0");
+					
+					$query="Update ".$tm4db.".result_".$season." as up,(select Min(rs.Score),rs.result From (Select straight_join m.Type,r.athlete,r.course,r.stroke,r.distance,r.score,r.result From ".$tm4db.".meet_".$season." as m, ".$tm4db.".result_".$season." as r Where trim(m.Type)!=''  and (DATEDIFF(m.Start,'".$rankdate."') <=0) and (m.Meet = r.Meet) and r.I_R='I' and r.NT=0 order by m.Type,r.athlete,r.course,r.stroke,r.distance,r.score) as rs Group by rs.Type,rs.athlete,rs.course,rs.stroke,rs.distance) as res";
+					$query.=" Set up.RType = 1 WHERE up.result=res.result";
+					$result = db_query($query);	
+					
+				variable_set('perfanal_ranking_last_update', $rankdate);
+				$last_ranking = $rankdate;
+				
+				//update fina points
+			}
+
+		//Rankings period ended
+		
+		
+		// Set up where conditioning
+		//extract(YEAR FROM from_days(datediff(curdate(), a.Birth)))
+			$Where = "";
+			if(arg(1)=='team_points')
+			$Where.=" r.AGE >=".floor(arg(5)/100)." and r.AGE <=".(arg(5)%100)." ";
+			else
+			$Where.=" a.age >=".floor(arg(5)/100)." and a.age <=".(arg(5)%100)." ";
+			$Where.= "and (DATEDIFF(m.Start,'".$last_ranking."') <=0)";
+			if(arg(2) != 'ALL')
+			$Where.= " and m.Type ='".arg(2)."' ";
+			if(arg(3) != 'ALL')
+			$Where.= " and r.COURSE='".arg(3)."' ";
+			switch(arg(4))
+			{
+				case 'female': $Where.= " and a.Sex='F'";
+				break;
+				case 'male': $Where.= " and a.Sex='M'";
+				break;
+			}
+			
+		//Display Rankings Title
+		//$output.="<p style='padding:5px;'  class='title' align='right'><small>As of ".$last_ranking."</small></p>";
+		$output.="<p style='padding:5px;' align='right'>".((arg(1)=='fina')?l('Base Times','fina/base_times/2004/'.arg(3)).' | ':'').l('Meets','meets/'.arg(2).'/'.$last_ranking)." | ".l('Detailed Information','ranking/info')."</p>";
+		
+		//Desided what rankings display
+		
+		drupal_set_title($type[arg(1)].' Rankings as of '.$last_ranking.'<br><small>'.arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.Course(1,arg(3)).'</small> ');
+		if(arg(1)=='indi_points') //Dsiplay Individual Points Rankings
+		{
+			return $output.Indi_Points2($tm4db,$season,$Where);
+		} else if(arg(1)=='team_points') // Display team Points Rankings
+		{
+			return $output.team_points($tm4db,$season,$Where);
+			
+		}else if(arg(6)==null || arg(7) ==null) // Stroke Distance selection
+		{
+			if(arg(1)=='score')
+			{
+				if(arg(3)=='S')
+				$age_groups[] = Array(25,25,25,25,null);
+				$age_groups[] = Array(50,50,50,50,null);
+				$age_groups[] = Array(100,100,100,100,100);
+				$age_groups[] = Array(200,200,200,200,200);
+				$age_groups[] = Array(400,null,null,null,400);
+				$age_groups[] = Array(800);
+				$age_groups[] = Array(1500);
+				
+				drupal_set_title('Rankings'." as of ".$last_ranking."<br/><small>".arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.Course(1,arg(3)).' '.$type[arg(1)].'</small>');
+				$headers[] = array('data' => t(Stroke(1)), 'width' => '80px');
+				$headers[] = array('data' => t(Stroke(2)), 'width' => '80px');
+				$headers[] = array('data' => t(Stroke(3)), 'width' => '80px');
+				$headers[] = array('data' => t(Stroke(4)), 'width' => '80px');
+				$headers[] = array('data' => t(Stroke(5)), 'width' => '80px');
+	
+				
+				foreach($age_groups as $gp)
+				{
+					$rows[] = array((($gp[0]!=null)?l($gp[0].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/1/'.$gp[0]):'-'),
+					(($gp[1]!=null)?l($gp[1].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/2/'.$gp[1]):'-'),
+					(($gp[2]!=null)?l($gp[2].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/3/'.$gp[2]):'-'),
+					(($gp[3]!=null)?l($gp[3].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/4/'.$gp[3]):'-'),
+					(($gp[4]!=null)?l($gp[4].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/5/'.$gp[4]):'-'));	
+				}
+				
+				$output.= theme('table', $headers, $rows);
+				return $output;
+			}
+			else
+			if(arg(1)=='fina'){
+				
+				$age_groups[] = Array(50,1,1,1,1,null);
+				$age_groups[] = Array(100,1,1,1,1,1);
+				$age_groups[] = Array(200,1,1,1,1,1);
+				$age_groups[] = Array(400,1,null,null,null,1);
+				$age_groups[] = Array(800,1);
+				$age_groups[] = Array(1500,1);
+				
+				drupal_set_title('Rankings'." as of ".$last_ranking."<br/><small>".arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.Course(1,arg(3)).' '.$type[arg(1)].'</small>');
+				$headers[] = array('data' => t('Distance'), 'width' => '70px');
+				$headers[] = array('data' => l(Stroke(1),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/1/All'), 'width' => '60px');
+				$headers[] = array('data' => l(Stroke(2),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/2/All'), 'width' => '60px');
+				$headers[] = array('data' => l(Stroke(3),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/3/All'), 'width' => '60px');
+				$headers[] = array('data' => l(Stroke(4),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/4/All'), 'width' => '60px');
+				$headers[] = array('data' => l(Stroke(5),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/5/All'), 'width' => '60px');
+	
+				
+				foreach($age_groups as $gp)
+				{
+					$rows[] = array((($gp[0]!=null)?l($gp[0].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/All/'.$gp[0]):'-'),
+					(($gp[1]==1)?theme_image('images/tick.gif','*'):'-'),
+					(($gp[2]==1)?theme_image('images/tick.gif','*'):'-'),
+					(($gp[3]==1)?theme_image('images/tick.gif','*'):'-'),
+					(($gp[4]==1)?theme_image('images/tick.gif','*'):'-'),
+					(($gp[5]==1)?theme_image('images/tick.gif','*'):'-'));	
+				}
+				
+				$output.=l('Overall Fina Points','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/All/All').' - Regardless of Stroke or Distance';
+				$output.='<br/><br/>';
+				
+				$output.= theme('table', $headers, $rows);
+				return $output;
+			}
+		}if(arg(1)=='score') // Display Times Rankings
+		{
+			drupal_set_title(' '.$type[arg(1)].' Rankings'." as of ".$last_ranking."<br/><small>".arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.arg(7).'m '.Stroke(arg(6)).' '.Course(1,arg(3)).'</small>');
+			$Where.= "and r.Stroke=".arg(6)." ";
+			$Where.= "and r.Distance=".arg(7)." ";
+			return $output.rank_score($tm4db,$season,$Where);
+			
+		}else if(arg(1)=='fina') // Display Fina Rankings
+		{
+			drupal_set_title(' '.$type[arg(1)].' Rankings'." as of ".$last_ranking."<br/><small>".arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.((arg(6)=='All' & arg(7)=='All')?'Overall':(((arg(7)=='All')?'':arg(7).'m ').((arg(6)=='All')?'':Stroke(arg(6))))).' '.Course(1,arg(3)).'</small>');
+			if(arg(6)!='All')
+			$Where.= "and r.Stroke=".arg(6)." ";
+			if(arg(7)!='All')
+			$Where.= "and r.Distance=".arg(7)." ";
+			//$Where.= "and f.years=2004 ";
+			return $output.rank_fina($tm4db,$season,$Where);
+		}
+	}
+	
+}
+
+function Indi_Points($tm4db,$season,$Where)  // Points Rankings Function
+{
+	$headers[] = array('data' => t('#'), 'width' => '20px');
+	$headers[] = array('data' => t('Score'), 'width' => '60px');
+	$headers[] = array('data' => t('Athlete Name'), 'width' => '250px');
+	$headers[] = array('data' => t('M/F'), 'width' => '30px');
+	$headers[] = array('data' => t('Age'), 'width' => '40px');
+	$headers[] = array('data' => t('Team'), 'width' => '80px');
+	
+	$query = "select e.Lo_Hi,  a.Athlete, a.Last, a.First, a.Sex,r.age, (sum(r.POINTS)/10) as Sum_Points, t.TCode, t.LSC from ";
+	$query.=" ((".$tm4db.".mtevent_".$season." as e left join ".$tm4db.".result_".$season." as r on (e.MtEvent=r.MTEVENT)) left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE= a.Athlete)) left join ".$tm4db.".team_".$season." as t on (r.TEAM=t.Team)";
+	$query.=" ".$Where." and r.I_R='I' and a.Athlete>0 GROUP BY e.Lo_Hi, r.ATHLETE having Sum(r.POINTS)>0 order by e.Lo_Hi, Sum_Points DESC,a.last";
+	
+	$result = db_query($query);
+	//$output.=$query;
+	$output= '<table><tr><td>';
+	
+	$pos = 0;
+	$pos2 = -1;
+	$point=NULL;
+	//Grouping
+	$Age=NULL;
+	$First = false;
+	while ($object = db_fetch_object($result))
+	{
+		if($Age != $object->Lo_Hi)
+		{
+			$Age = $object->Lo_Hi;
+			$pos = 0;
+			//Heading for Grouping
+			if($rows==NULL && $First)
+			$rows[] = array(array('data' => t('There are no results for this Age Group'), 'colspan' => 6));
+			$First=true;
+				
+			if($rows !=NULL)                     
+			$output.= theme('table', $headers, $rows).'<br>';
+			$output.= "<br><p class='title' align=\'center\'><b>".Age($object->Lo_Hi).'</b></p><br>';
+			$rows = NULL;
+		}
+		
+		
+		if($point != $object->Sum_Points)
+		{	
+			$point = $object->Sum_Points;
+			$pos++;
+		}
+		$rows[] = array((($pos ==$pos2)?'-':$pos),$object->Sum_Points,( ($object->Last==NULL)?'Athlete not found':l(t($object->Last.", ".$object->First), $link)), $object->Sex, $object->age, $object->TCode."-".$object->LSC);
+		if($pos != pos2)
+		$pos2 = $pos;
+	}
+	if (!$rows)
+	{
+		$rows[] = array(array('data' => t('There are no results for this Age Group, click '.l(t('here'), 'meets/points/'.arg(3)).' to go back.'), 'colspan' => 6));
+	}
+	$output.= theme('table', $headers, $rows);
+	$output.= '</td></tr></table>';
+	return $output;
+}
+
+function theme_meets_filters($form)
+{	
+	$output.="<table><tr>";
+	$output.= '<td>'.form_render($form['type']).'</td>';
+	$output.= '<td>&nbsp;&nbsp;&nbsp;'.form_render($form['submit']).'</td>';
+	$output.= '</tr></table>';
+	return $output;
+}
+
+function perfanal_meets()
+{
+	$edit = $_POST["edit"];
+	$seasons = extract_seasons();
+	$tm4db = variable_get('perfanal_database', 'perfanal');
+	$min_display = variable_get('perfanal_min_display', '20');
+	/*
+	switch($_POST["op"])
+	{
+		case t('load'):
+		{
+			drupal_goto('gala_results/'.$edit['season']);
+		} break;
+		
+		default:
+		{
+			$form['season'] = array('#type' => 'select', '#options' => $seasons, '#default_value' => arg(1));
+			$form['submit'] = array('#type' => 'submit', '#value' => t('load'));
+			
+			$output = drupal_get_form('gala_results', $form);
+		} break;
+	}*/
+	
+	$season = (($edit["season"]) ? $edit["season"] : '');
+	if (!$season)
+	{
+		$rev_seasons = array_reverse($seasons, true);
+		foreach ($rev_seasons as $key => $value)
+			$season = $key;
+	}
+	$output='';
+	switch(arg(1))
+	{
+		case 'team_points':  //Team points Rankings
+		{
+			if(arg(2) !='female' & arg(2) !='male' & arg(2) !='mixed')
+			{
+				$query = "select m.MName, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke, e.Course from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m WHERE e.Meet=".arg(2)." and e.Meet=m.Meet";
+				$result = db_query($query);
+				$object = db_fetch_object($result);
+				drupal_set_title($object->MName.' Meet');//."&nbsp;&nbsp;&nbsp;Points Rankings<br><br>");
+				
+				$output.="<div class='tabs'><ul class='tabs primary'>";
+				$output.="<li>".l('Info','meets/info/'.arg(2))."</li>";
+				$output.=" <li>".l('Events','meets/events/'.arg(2))."</li>";
+				$output.="<li>".l('Individual Points','meets/points/'.arg(2))."</li>";
+				$output.="<li  class='active'>".l('Team Points','meets/team_points/'.arg(2))."</li>";
+				$output.="</ul></div>";
+						
+				$output.="<br>".l('Mixed','meets/team_points/mixed/'.arg(2));
+				$output.="<br><br>".l('Female','meets/team_points/female/'.arg(2));
+				$output.="<br><br>".l('Male','meets/team_points/male/'.arg(2));
+			}
+			else
+			{
+				$query = "select m.MName, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke, e.Course from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m WHERE e.Meet=".arg(3)." and e.Meet=m.Meet";
+				$result = db_query($query);
+				$object = db_fetch_object($result);
+				drupal_set_title($object->MName.' Meet');
+				switch(arg(2))
+				{
+					case 'female': $Gen= "Female";
+					break;
+					case 'male': $Gen="Male";
+					break;
+					case 'mixed': $Gen="Mixed";
+					break;
+				}
+				$output.= "<br><p class='title' align=\'center\'>".$Gen." Team Rankings</p><br>";
+				
+				$Where='';
+				switch(arg(2))
+				{
+					case 'female': $Where.= " and a.Sex='F'";
+					break;
+					case 'male': $Where.= " and a.Sex='M'";
+					break;
+				}
+				
+				/*Display team rankings*/
+				
+				$headers[] = array('data' => t('#'), 'width' => '20px');
+				$headers[] = array('data' => t('Score'), 'width' => '60px');
+				$headers[] = array('data' => t('Team Name'), 'width' => '250px');
+				$headers[] = array('data' => t('Code'), 'width' => '80px');
+				$headers[] = array('data' => t('Athletes'), 'width' => '80px');
+				
+				$query="SELECT SUM(r.POINTS)/10 as Sum_Points,t.TName,t.TCode, t.LSC , Count(DISTINCT If(r.I_R='I',r.Athlete,0)) AS Sum_Athletes";
+				$query.=" FROM (".$tm4db.".result_".$season." as r  left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left join ".$tm4db.".team_".$season." as t on (r.TEAM=t.Team)";
+				$query.=" Where r.Meet=".arg(3).$Where." Group by r.Team HAVING SUM(r.POINTS)>0 Order by Sum_Points Desc";
+						
+				$result = db_query($query);
+				
+				$pos = 0;
+				$pos2 = -1;
+				$point=NULL;
+				while ($object = db_fetch_object($result))
+				{
+					if($point != $object->Sum_Points)
+					{	
+						$point = $object->Sum_Points;
+						$pos++;
+					}
+					$rows[] = array((($pos ==$pos2)?'-':$pos),$object->Sum_Points,( ($object->TName==NULL)?'Team not found':$object->TName), $object->TCode."-".$object->LSC,$object->Sum_Athletes);
+					if($pos != pos2)
+					$pos2 = $pos;
+				}
+				if (!$rows)
+				{
+					$rows[] = array(array('data' => t('There are no results for this Gender, click '.l(t('here'), 'meets/team_points/'.arg(3)).' to go back.'), 'colspan' => 5));
+				}
+				$output.= theme('table', $headers, $rows);
+			}	
+		}
+		break;
+		
+		case 'points':  //Individual Points Rankings
+		{
+			if(arg(2) !='female' & arg(2) !='male' & arg(2) !='mixed')
+			{
+				$query = "select m.MName, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke, e.Course from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m WHERE e.Meet=".arg(2)." and e.Meet=m.Meet";
+				$result = db_query($query);
+				$object = db_fetch_object($result);
+				drupal_set_title($object->MName.' Meet');//."&nbsp;&nbsp;&nbsp;Points Rankings<br><br>");
+				
+				$output.="<div class='tabs'><ul class='tabs primary'>";
+				$output.="<li>".l('Info','meets/info/'.arg(2))."</li>";
+				$output.="<li>".l('Events','meets/events/'.arg(2))."</li>";
+				$output.="<li  class='active'>".l('Individual Points','meets/points/'.arg(2))."</li>";
+				$output.="<li>".l('Team Points','meets/team_points/'.arg(2))."</li>";
+				$output.="</ul></div>";
+				
+				//$output.= "<br><p class='title' align=\'center\'>Points Rankings</p><br>";
+				
+				$headers [] = array('data'=>t('Female'),'width'=>'100px');
+				$headers [] = array('data'=>t('Male'),'width'=>'100px');
+				$headers [] = array('data'=>t('Mixed'),'width'=>'100px');
+				
+				$query = "SELECt Distinct Lo_Hi from ".$tm4db.".mtevent_".$season." Where I_R='I' and  Meet=".arg(2)." order by Lo_Hi";
+				$result = db_query($query);
+				$rows[] = array(l('All Groups','meets/points/female/'.arg(2)),l('All Groups','meets/points/male/'.arg(2)),l('All Groups','meets/points/mixed/'.arg(2)));
+				while ($object = db_fetch_object($result))
+				{
+					$rows[] = array(l(Age($object->Lo_Hi),'meets/points/female/'.arg(2).'/'.$object->Lo_Hi),l(Age($object->Lo_Hi),'meets/points/male/'.arg(2).'/'.$object->Lo_Hi),l(Age($object->Lo_Hi),'meets/points/mixed/'.arg(2).'/'.$object->Lo_Hi));
+				}
+				$output.= theme('table', $headers, $rows);
+			}
+			else
+			{
+				$query = "select m.MName, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke, e.Course from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m WHERE e.Meet=".arg(3)." and e.Meet=m.Meet";
+				$result = db_query($query);
+				$object = db_fetch_object($result);
+				drupal_set_title($object->MName.' Meet');
+				switch(arg(2))
+				{
+					case 'female': $Gen= "Female";
+					break;
+					case 'male': $Gen="Male";
+					break;
+					case 'mixed': $Gen="Mixed";
+					break;
+				}
+				$output.= "<br><p class='title' align=\'center\'>".$Gen." Points Rankings</p><br>";
+					
+				$Where = ' ';	
+				switch(arg(2))
+				{
+					case 'female': $Where.= " and a.Sex='F'";
+					break;
+					case 'male': $Where.= " and a.Sex='M'";
+					break;
+				}
+				if(arg(4) !=NULL)
+				{
+					$Where.= " and e.Lo_Hi =".arg(4);	
+				}
+					
+				//Call render functon
+				
+				$output.=Indi_Points($tm4db,$season,"WHERE e.Meet=".arg(3).' '.$Where);
+				return $output;
+			}
+		}
+		break;
+		
+		case 'info':
+		{
+			$query = "select IF(m.Start>CURDATE(),1,0) as results,m.*, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke, e.Course from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m WHERE e.Meet=".arg(2)." and e.Meet=m.Meet";
+			$result = db_query($query);
+			$object = db_fetch_object($result);
+			drupal_set_title($object->MName.' Meet');
+			
+			
+			$output.="<div class='tabs'><ul class='tabs primary'>";
+			$output.="<li class='active'>".l('Info','meets/info/'.arg(2))."</li>";
+			$output.=" <li>".l('Events','meets/events/'.arg(2))."</li>";
+			If($object->results==0)
+			{
+				$output.="<li>".l('Individual Points','meets/points/'.arg(2))."</li>";
+				$output.="<li>".l('Team Points','meets/team_points/'.arg(2))."</li>";
+			}
+			$output.="</ul></div>";
+			
+			$type = ($object->Type==null)?'ALL':$object->Type;
+			$output.="<br><table  width='435px' cellSpacing='5' cellPadding='5' border='0'>";
+			$output.="<tr><td width='110'>Starts:</td><td width='50' align='right'>".get_date($object->Start)."</td><td width='115'>Age-up:</td><td width='60' align='right'>".get_date($object->AgeUp)."</td></tr>";
+			$output.="<tr><td>Ends:</td><td align='right'>".get_date($object->End)."</td><td>Times Since:</td><td align='right'>".get_date($object->Since)."</td></tr>";
+			$output.="<tr><td>Course: </td><td align='right'>".Course(1,$object->Course)."</td><td>Meet Type:</td><td align='right'>".l($type,'meets/'.$type)."</td></tr>";
+			$output.="<tr><td style='cursor:hand' title='Entry Times must come from Meets of the same Meet Type as this one.'>E.T Same Type:</td><td align='right'>".yesno($object->RestricitBest)."</td><td>Min Open Age:</td><td align='right'>".hasvalue('',$object->MinAge)."</td></tr>";
+			$output.="<tr><td>Altitude in Feet:</td><td align='right'>".hasvalue('',$object->Altitude>0)."</td><td nowrap>Q/Times Enforced:</td><td align='right'>".yesno($object->EnforceQualiyfing)."</td></tr>";
+			$output.="</table>";
+			
+			$output.="<hr align='left' width='435'>";
+								
+								
+			$output.="<table width='435px' cellSpacing='5' cellPadding='5' border='0'>";
+			$output.="<tr><td vAlign='top' width='76'>Location:</td><td vAlign='top'>".$object->Location."</td></tr>";
+			$output.="<tr><td vAlign='top'>Remarks:</td><td vAlign='top'>".$object->Remarks."</td></tr>";
+			$output.="</table>";
+			
+			$output.="<hr align='left' width='435'>";				
+								
+			$output.="<table cellSpacing='5' cellPadding='5' border='0' width='435px'>";
+			$output.="<tr><td width='134'>Individual Entries:</td><td width='77' align='right'>".hasvalue('R ',$object->IndCharge)."</td><td width='117'>Sure Charge</td><td align='right'>".hasvalue('R ',$object->SurCharge)."</td></tr>";
+			$output.="<tr><td width='134'>Relay Entries:</td><td width='77' align='right'>".hasvalue('R ',$object->RelCharge)."</td><td width='117'>Team Charge:</td><td align='right'>".hasvalue('R ',$object->TeamFee)."</td></tr>";
+			$output.="<tr><td width='134'>Facility Charge:</td><td width='77' align='right'>".hasvalue('R ',$object->FacilityFee)."</td><td>Sanction #:</td><td align='right'>".hasvalue('',$object->Sanction)."</td></tr>";
+			$output.="</table>";
+			
+			$output.="<hr align='left' width='435'>";
+			
+			$output.="<table cellSpacing='5' cellPadding='5' border='0' width='435px'>";
+			$output.="<td colspan='4'><u>Instructions/Directions:</u></td></tr><tr>";
+			$output.="<td colspan='4'>".$object->Instructions."</td></tr>";
+			$output.="</table>";
+		}
+		break;
+		
+		default:
+		switch(arg(2))
+			{
+				case 'results': //Idividual results
+				{
+					switch( arg(1))
+					{
+					case 'event':	
+						$Where = 'where e.MtEvent='.arg(3);
+						break;
+					case 'events':	
+						$Where = 'where e.Meet='.arg(3).' and e.MtEv='.arg(4);
+						break;
+					case '':
+					}
+					
+					$query = "select m.MName, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke, e.Course from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m ".$Where." and e.Meet=m.Meet";
+					$result = db_query($query);
+					$object = db_fetch_object($result);
+					
+					drupal_set_title($object->MName.' Meet'."&nbsp;<br>");
+					
+					
+					$headers[] = array('data' => t('#'), 'width' => '20px');
+					$headers[] = array('data' => t('Time'), 'width' => '60px');
+					$headers[] = array('data' => t('Athlete Name'), 'width' => '250px');
+					$headers[] = array('data' => t('M/F'), 'width' => '30px');
+					$headers[] = array('data' => t('Age'), 'width' => '40px');
+					$headers[] = array('data' => t('Team'), 'width' => '80px');
+					$headers[] = array('data' => t('Points'), 'width' => '30px');
+					$headers[] = array('data' => t('Best'), 'width' => '40px');
+		
+									
+					$query = "(select e.MtEvent, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke,e.I_R, e.Course, ((r.SCORE -r2.SCORE)/100) AS improv, MIN(r2.SCORE) as fastest, a.Athlete, a.Last, a.First, a.Sex,r.F_P , If(r.PLACE>0,r.PLACE,'') As PLACE,r.MTEVENT, r.NT, r.SCORE,IF(r.POINTS>0,Round(r.POINTS/10),'') as POINTS, r.Age, t.TCode, t.LSC"; 
+					$query.= " from (((".$tm4db.".mtevent_".$season." as e left join ".$tm4db.".result_".$season." as r on (e.MtEvent=r.MTEVENT)) left join ".$tm4db.".result_".$season." as r2 ON (r.Course=r2.Course and r.STROKE=r2.STROKE AND r.DISTANCE=r2.DISTANCE and r.ATHLETE=r2.ATHLETE And r2.RANK=1)) left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE= a.Athlete)) left join ".$tm4db.".team_".$season." as t on (r.TEAM=t.Team) ";
+					$query.= $Where." GROUP BY e.MtEvent, r.ATHLETE order by e.Meet,e.MtEv,e.MtEvX, r.F_P,r.NT,r.PLACE,r.SCORE)";
+					
+					//$output=$query;
+					
+					$result = db_query($query);
+					//drupal_set_message('count: '.db_num_rows($result));
+					$output.= '<table><tr><td>';
+					//Grouping Fields
+					$F_P= NULL;
+					$Event=NULL;
+					//$First = false;
+					while ($object = db_fetch_object($result))
+					{
+						if($Event <> $object->MtEvent)
+						{
+							$F_P = $object->F_P;
+							$Event = $object->MtEvent;
+							//if($rows==NULL && $First)
+							//$output.= '<p align=\'center\'><b>'.t('There are no results for this event').'</b></p>';
+							//$rows[] = array(array('data' => t('There are no results for this event'), 'colspan' => 8));
+							//$First = true;
+							if($rows !=NULL)
+							$output.= theme('table', $headers, $rows).'<br>';
+							
+							$output.= "<br><br><p class='title' align='left'><b><small>Event: ".$object->MtEv.''.$object->MtEvX.' &nbsp;&nbsp;'.Gender($object->Sex).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.$object->Distance.'m &nbsp;'.Stroke($object->Stroke).' &nbsp;&nbsp;&nbsp;'.IR($object->I_R).' &nbsp;'.Course(1,$object->Course).'</small></b></p><br>';
+							if($object->MTEVENT == NULL)
+							{
+								$output.= '<p align=\'center\'><b>'.t('There are no results for this event').'</b></p>';
+								continue;
+							}
+							//$output.= "<br><p class='title' align='left'><b>Event: ".$object->MtEvX.' &nbsp;&nbsp;'.Gender($object->ESex).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.t(FP($object->F_P)).'s'.'</b></p>';
+							$output.= '<p align=\'center\'><b>'.t(FP($object->F_P)).'s</b></p>';
+							$rows = NULL;
+						}
+						
+						if($F_P <> $object->F_P)
+						{
+							$F_P = $object->F_P;
+							//Heading for Grouping
+							//if($rows==NULL && $First)
+							//$output.= '<p align=\'center\'><b>'.t('There are no results for this event').'</b></p>';
+							//$rows[] = array(array('data' => t('There are no results for this event'), 'colspan' => 8));
+							
+							if($rows !=NULL)                     
+							$output.= theme('table', $headers, $rows).'<br>';
+							$output.= '<p align=\'center\'><b>'.t(FP($object->F_P)).'s</b></p>';
+							$rows = NULL;
+						}
+						
+							$link = "swimmers_results/".arg(1)."/toptimes/".$object->Athlete;
+							if($object->PLACE>0)	
+							$rows[] = array($object->PLACE,Score($object->NT,$object->SCORE),( ($object->Last==NULL)?'Athlete not found':l(t($object->Last.", ".$object->First), $link)), $object->Sex, $object->Age, $object->TCode."-".$object->LSC ,$object->POINTS,' '.(($object->improv==0)?'':(($object->improv>0)?'+'.$object->improv:"<font color='#000099'><b>".$object->improv.'</b></font>')).'</small>');
+							else
+							$rows[] = array(NT($object->NT),get_time($object->SCORE),( ($object->Last==NULL)?'Athlete not found':l(t($object->Last.", ".$object->First), $link)), $object->Sex, $object->Age, $object->TCode."-".$object->LSC , $object->POINTS,'');
+						
+					}
+					if($rows !=NULL)
+					$output.= theme('table', $headers, $rows);
+					
+					//$output.= '<p align=\'center\'><b>'.t('There are no results for this event').'</b></p>';
+								
+					
+					/*if (!$rows)
+					{
+						$rows[] = array(array('data' => t('There are no results for this event, click '.l(t('here'), 'meets/'.arg(1).'/event/'.arg(3)).' to go back.'), 'colspan' => 8));
+					}
+					$output.= theme('table', $headers, $rows);*/
+					$output.= '<br></td></tr></table>';
+					
+				} 
+				break;
+				
+				case 'result': //Relay results
+				
+				switch( arg(1))
+					{
+					case 'event':	
+						$Where = 'where e.MtEvent='.arg(3);
+						break;
+					case 'events':	
+						$Where = 'where e.Meet='.arg(3).' and e.MtEv='.arg(4);
+						break;
+					case '':
+					}
+					
+				$query = "select m.MName, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke, e.Course from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m ".$Where." and e.Meet=m.Meet";
+				$result = db_query($query);
+				$object = db_fetch_object($result);
+				drupal_set_title($object->MName.' Meet'."&nbsp;<br>");	
+				
+				
+				$joins ='';
+				$brackets='';
+				$athletes='';
+				for($c=1;$c<8;$c++)
+				{
+					$joins.=' left join '.$tm4db.'.athlete_'.$season.' as a'.$c.' on (y.ATH'.$c.'=a'.$c.'.Athlete))';
+					$brackets.='(';
+					$athletes.=', a'.$c.'.athlete as athlete_'.$c.', a'.$c.'.Last as last_'.$c.', a'.$c.'.First as first_'.$c.'';
+				}
+				$query ="(select e.MtEvent, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke,e.I_R, e.Course,r.MTEVENT, r.F_P, If(r.PLACE>0,r.PLACE,'') As PLACE, r.NT, r.SCORE, IF(r.POINTS>0,Round(r.POINTS/10),'') as POINTS";
+				$query .=", y.Sex, y.LETTER, t.TName, t.TCode, t.LSC ".$athletes;
+				$query .=" From ".$brackets."(((".$tm4db.".mtevent_".$season." as e left join ".$tm4db.".result_".$season." as r on (e.MtEvent=r.MTEVENT)) left join ".$tm4db.".relay_".$season." as y on (r.ATHLETE=y.Relay)) left JOIN ".$tm4db.".team_".$season." as t on (r.TEAM=t.Team)) ".$joins;
+				$query .=" ".$Where." and (r.I_R='R' Or r.I_R IS NULL) Order By e.Meet,e.MtEv,e.MtEvX, r.F_P,r.NT,r.PLACE,r.SCORE)";
+				//$output.=$query;
+				
+				$result = db_query($query);
+				
+					$headers[] = array('data' => t('#'), 'width' => '20px');
+					$headers[] = array('data' => t('Time'), 'width' => '60px');
+					$headers[] = array('data' => t('Relay Team'), 'width' => '250px');
+					$headers[] = array('data' => t('M/F'), 'width' => '30px');
+					$headers[] = array('data' => t('Team'), 'width' => '80px');
+					$headers[] = array('data' => t('Points'), 'width' => '30px');
+					
+					$athheaders[] = array('data' => t('Athlete'), 'width' => '250px');
+					
+				
+					$output.= '<table><tr><td>';
+					//Grouping Fields
+					$F_P= NULL;
+					$Event=NULL;
+					$First = false;
+					while ($object = db_fetch_object($result))
+					{
+						if($Event <> $object->MtEvent)
+						{
+							$F_P = $object->F_P;
+							$Event = $object->MtEvent;
+							/*if($rows==NULL && $First)
+							$rows[] = array(array('data' => t('There are no results for this event'), 'colspan' => 8));
+							$First = true;*/
+							
+							if($rows !=NULL)
+							$output.= theme('table', $headers, $rows).'<br>';
+							
+							$output.= "<br><br><p class='title' align='left'><b><small>Event: ".$object->MtEv.''.$object->MtEvX.' &nbsp;&nbsp;'.Gender($object->Sex).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.$object->Distance.'m &nbsp;'.Stroke($object->Stroke).' &nbsp;&nbsp;&nbsp;'.IR($object->I_R).' &nbsp;'.Course(1,$object->Course).'</small></b></p><br>';
+							if($object->MTEVENT == NULL)
+							{
+								$output.= '<p align=\'center\'><b>'.t('There are no results for this event').'</b></p>';
+								continue;
+							}
+							
+							
+							//$output.= "<br><p class='title' align='left'><b>Event: ".$object->MtEvX.' &nbsp;&nbsp;'.Gender($object->ESex).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.t(FP($object->F_P)).'s'.'</b></p>';
+							$output.= '<p align=\'center\'><b>'.t(FP($object->F_P)).'s</b></p>';
+							$rows = NULL;
+						}
+						
+						if($F_P <> $object->F_P)
+						{
+							$F_P = $object->F_P;
+							//Heading for Grouping
+						//	if($rows==NULL && $First)
+						//	$rows[] = array(array('data' => t('There are no results for this event'), 'colspan' => 8));
+							
+							if($rows !=NULL)                     
+							$output.= theme('table', $headers, $rows).'<br>';
+							$output.= '<p align=\'center\'><b>'.t(FP($object->F_P)).'s</b></p>';
+							$rows = NULL;
+						}
+						
+						$link = "swimmers_results/".arg(1)."/toptimes/".$object->Athlete;
+						if($object->PLACE>0)	
+						$rows[] = array($object->PLACE,Score($object->NT,$object->SCORE),$object->LETTER.(($object->TName==NULL)?' Team not found':' &nbsp;'.$object->TName), $object->Sex, $object->TCode."-".$object->LSC ,$object->POINTS);
+						else
+						$rows[] = array(NT($object->NT),get_time($object->SCORE),$object->LETTER.(($object->TName==NULL)?' Team not found':' &nbsp;'.$object->TName), $object->Sex, $object->TCode."-".$object->LSC ,$object->POINTS);
+						/*
+						$object = db_fetch_array($result);
+						$aths='';
+						for ($i=0; $i<8; $i++)
+						if($object['athlete_'.$i]!=NULL)
+							$aths .= l($object['last_'.$i].",".$object['first_'.$i], "swimmers_results/".arg(1)."/toptimes/".$object['athlete_'.$i]).' &nbsp;&nbsp;';
+						
+						$rows[] = array('',array('data' =>$aths , 'colspan' => 7));
+						$aths = NULL;*/
+						
+					}
+					if($rows !=NULL)
+					$output.= theme('table', $headers, $rows);
+					/*if (!$rows)+
+					{
+						$rows[] = array(array('data' => t('There are no results for this event, click '.l(t('here'), 'meets/'.arg(1).'/event/'.arg(3)).' to go back.'), 'colspan' => 8));
+					}
+					$output.= theme('table', $headers, $rows);*/
+					$output.= '</td></tr></table>';
+				
+				break;
+				
+				
+				
+				default://means its event or events
+				switch(arg(1))
+				{
+					case 'events':
+					{
+			
+						$query = "select IF(m.Start>CURDATE(),1,0) as results, m.MName FROM ".$tm4db.".meet_".$season." as m where m.Meet=".arg(2);
+						$result = db_query($query);
+						$object = db_fetch_object($result);
+						$display_link = $object->results;
+						drupal_set_title($object->MName.' Meet');
+							
+						$output.="<div class='tabs'><ul class='tabs primary'>";
+						$output.="<li>".l('Info','meets/info/'.arg(2))."</li>";
+						$output.=" <li class='active'>".l('Events','meets/events/'.arg(2))."</li>";
+						If($display_link==0)
+						{
+							$output.="<li>".l('Individual Points','meets/points/'.arg(2))."</li>";
+							$output.="<li>".l('Team Points','meets/team_points/'.arg(2))."</li>";
+						}
+						$output.="</ul></div>";
+			
+						$headers[] = array('data' => t('Event'), 'width' => '50px');
+						$headers[] = array('data' => t('Gender'), 'width' => '60px');
+						$headers[] = array('data' => t('Age'), 'width' => '100px');
+						$headers[] = array('data' => t('Distance'), 'width' => '50px');
+						$headers[] = array('data' => t('Stroke'), 'width' => '80px');
+						$headers[] = array('data' => t('I/R'), 'width' => '40px');
+						$headers[] = array('data' => t('Course'), 'width' => '40px');
+			
+						$result = db_query("Select DISTINCT MtEvent, IF(Count(MtEvX)=1,Lo_Hi,'*') as Lo_Hi ,MtEv, IF(Count(Distinct Sex)=1,Sex,'X') As Sex, Distance, Stroke, I_R,If(Count(*)>0,Count(*),1) as Events, Course, Sum(Results) as Results FROM ".$tm4db.".mtevent_".$season." WHERE Meet=".arg(2)." Group by MtEv order by MtEv");
+						
+						while ($object = db_fetch_object($result))
+						{	
+							$link = 'meets/'.(($object->Events==1)?'event/'.(($object->I_R =='I')?'results/':'result/').$object->MtEvent:((($object->Results)<$min_display)?'events/'.(($object->I_R =='I')?'results/':'result/').arg(2).'/'.$object->MtEv:'event/'.arg(2).'/'.$object->MtEv));
+							//$link = 'meets/'.((($object->Sex=='X')?((($object->Results)<$min_display)?'events/'.(($object->I_R =='I')?'results/':'result/').arg(2).'/'.$object->MtEv:'event/'.arg(2).'/'.$object->MtEv):((($object->I_R =='I')?'event/results/':'event/result/').$object->MtEvent)));
+							$rows[] = array(($display_link==0)?l(t($object->MtEv.(($object->Results<$min_display)?'*':'')), $link):$object->MtEv,Gender($object->Sex), Age($object->Lo_Hi), $object->Distance."m", Stroke($object->Stroke), IR($object->I_R), Course(0,$object->Course));
+						}
+						$output.= theme('table', $headers, $rows);
+					}
+					break;
+					
+					case 'event':
+					{
+			
+						$query = "select m.MName,e.Lo_Hi, e.Distance, e.Stroke, e.Course, e.I_R from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m where m.Meet=".arg(2)." And e.MtEv=".arg(3)." and e.Meet=m.Meet";
+						$result = db_query($query);
+						$object = db_fetch_object($result);
+				
+						drupal_set_title($object->MName.'Meet');
+						//.' Meet'."&nbsp;<br><p><b><small>Event: ".arg(3).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.$object->Distance.'m &nbsp;'.Stroke($object->Stroke).' &nbsp;&nbsp;'.IR($object->I_R).' &nbsp;'.Course(1,$object->Course).'</small></b></p>');
+						
+						$output .= "<br><p class='title' align=\'center\'>"."<small>Event: ".arg(3).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.$object->Distance.'m &nbsp;'.Stroke($object->Stroke).' &nbsp;&nbsp;'.IR($object->I_R).' &nbsp;'.Course(1,$object->Course)."</small></p><br>";
+						
+						$output.='<br>'.l('All Events Results','meets/'.(($object->I_R =='I')?'events/results/':'events/result/').arg(2).'/'.arg(3)).'<br><br>';
+						$headers[] = array('data' => t('Event'), 'width' => '50px');
+						$headers[] = array('data' => t('Gender'), 'width' => '60px');
+						$headers[] = array('data' => t('Age'), 'width' => '100px');
+						
+						$result = db_query("Select MtEvent, MtEvX, Sex, Lo_Hi, I_R FROM ".$tm4db.".mtevent_".$season." WHERE Meet=".arg(2)." And MtEv=".arg(3)." order by MtEvX");
+						
+						while ($object = db_fetch_object($result))
+						{		
+							$link = "meets/".(($object->I_R =='I')?'event/results/':'event/result/').$object->MtEvent;
+							$rows[] = array(l(t($object->MtEvX), $link),Gender($object->Sex), Age($object->Lo_Hi));
+							
+						}
+						$output.= theme('table', $headers, $rows);
+					}
+					break;
+					
+					default:
+					{
+						if(arg(1)==null)
+						drupal_goto('meets/ALL');
+						$edit = $_POST["edit"];
+		
+						if($edit['type'] !=null)
+						drupal_goto('meets/'.$edit['type']);
+						
+						
+						drupal_set_title('Meets');
+						
+						$output.= highlight_js('meets');
+						
+						$results = db_query("Select * From ".$tm4db.".code_".$season." Where TYPE=3");
+						
+						$club_list['ALL'] = 'All';
+						while($object = db_fetch_object($results))
+						if($object->ABBR !=null)
+						$club_list[$object->ABBR] = ($object->ABBR.' - '.$object->DESC);
+						
+						$form['type'] = array('#type' => 'select', '#options' => $club_list, '#default_value' => arg(1));
+						$form['submit'] = array('#type' => 'submit', '#value' => t('Filter'));
+						$output.= drupal_get_form('meets_filters', $form);
+						
+						$headers[] = array('data' => t('Meet'), 'width' => '300px','field' => 'm.MName');
+						$headers[] = array('data' => t('Type'), 'width' => '20px');
+						$headers[] = array('data' => t('Start date'), 'width' => '92px','sort' => 'desc','field' => 'm.Start');
+						$headers[] = array('data' => t('End date'), 'width' => '90px');
+						$headers[] = array('data' => t('Course'), 'width' => '40px');
+						$headers[] = array('data' => t('Location'));
+						// order by m.Start DESC
+				
+						
+						$result = db_query("select DISTINCT IF(m.Start>CURDATE(),1,0) as results, m.Meet, m.MName, m.Start, m.End,m.Type, m.Course, m.Location  from ".$tm4db.".meet_".$season." m, ".$tm4db.".mtevent_".$season." e where m.Meet=e.Meet ".((arg(1)=='ALL')?'':"and m.Type='".arg(1)."'").((arg(2)==null)?'':"and m.Start<='".arg(2)."'")." and m.Start is not null and m.End is not null ".tablesort_sql($headers));
+						
+						while ($object = db_fetch_object($result))
+						{
+							$link = (($object->results==0)?"meets/events/".$object->Meet:'meets/info/'.$object->Meet);
+		
+							   //  $class= ($object->results==0)?'onlythis':'highlight';
+							   
+							$rows[] = array('data' => array(l(t($object->MName), $link),$object->Type,get_date($object->Start), get_date($object->End), Course(0,$object->Course), $object->Location),'class'=>'onlythis');
+						}
+						$output.= theme_table($headers, $rows,NULL,NULL);
+					} 
+					break;
+				}
+				break;
+			}
+		break;
+		
+	}
+	
+	/*
+	switch(arg(2))
+	{
+		case 'events':
+		{
+			
+			$query = "select m.MName FROM ".$tm4db.".meet_".$season." as m where m.Meet=".arg(3);
+			$result = db_query($query);
+			$object = db_fetch_object($result);
+	
+			drupal_set_title($object->MName);
+
+			$headers[] = array('data' => t('Event'), 'width' => '50px');
+			$headers[] = array('data' => t('Gender'), 'width' => '60px');
+			$headers[] = array('data' => t('Age'), 'width' => '100px');
+			$headers[] = array('data' => t('Distance'), 'width' => '50px');
+			$headers[] = array('data' => t('Stroke'), 'width' => '80px');
+			$headers[] = array('data' => t('I/R'), 'width' => '40px');
+			$headers[] = array('data' => t('Course'), 'width' => '40px');
+
+			$result = db_query("Select DISTINCT MtEvent, IF(Count(MtEvX)=1,Lo_Hi,'*') as Lo_Hi ,MtEv, IF(Count(MtEvX)=1,Sex,'X') As Sex, Distance, Stroke, I_R,If(Count(*)>0,Count(*),1) as Events, Course, Sum(Results) as Results FROM ".$tm4db.".mtevent_".$season." WHERE Meet=".arg(3)." Group by MtEv order by MtEv");
+			
+			while ($object = db_fetch_object($result))
+			{		
+				$link = 'meets/'.((($object->Sex=='X')?((($object->Results)<$min_display)?'events/results/'.arg(3).'/'.$object->MtEv:'/event/'.arg(3).'/'.$object->MtEv):((($object->I_R =='I')?'event/results/':'event/result/').$object->MtEvent)));
+				$rows[] = array(($object->I_R !='I')?$object->MtEv:l(t($object->MtEv), $link),Gender($object->Sex), Age($object->Lo_Hi), $object->Distance."m", Stroke($object->Stroke), IR($object->I_R), Course(0,$object->Course).' '.$object->Events);
+			}
+			$output.= theme('table', $headers, $rows);
+		} break;
+		
+		case 'event':
+		{
+			
+			$query = "select m.MName,e.Lo_Hi, e.Distance, e.Stroke, e.Course from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m where m.Meet=".arg(3)." And e.MtEv=".arg(4)." and e.Meet=m.Meet";
+			$result = db_query($query);
+			$object = db_fetch_object($result);
+	
+			drupal_set_title($object->MName."&nbsp;<br><p><b><small>Event: ".arg(4).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.$object->Distance.'m &nbsp;'.Stroke($object->Stroke).' &nbsp;'.Course(1,$object->Course).'</small></b></p>');
+			
+			$output='<br>'.l('All Events Results','meets/events/results/'.arg(3).'/'.arg(4)).'<br><br>';
+			$headers[] = array('data' => t('Event'), 'width' => '50px');
+			$headers[] = array('data' => t('Gender'), 'width' => '60px');
+			$headers[] = array('data' => t('Age'), 'width' => '100px');
+			
+			$result = db_query("Select MtEvent, MtEvX, Sex, Lo_Hi FROM ".$tm4db.".mtevent_".$season." WHERE Meet=".arg(3)." And MtEv=".arg(4)." order by MtEvX");
+			
+			while ($object = db_fetch_object($result))
+			{		
+				$link = "meets/event/results/".$object->MtEvent;
+				$rows[] = array(l(t($object->MtEvX), $link),Gender($object->Sex), Age($object->Lo_Hi));
+				
+			}
+			$output.= theme('table', $headers, $rows);
+		} break;
+		
+		
+		case 'results':
+		{
+			$start = Time();
+			switch( arg(1))
+			{
+			case 'event':	
+				$Where = 'where e.MtEvent='.arg(3);
+				break;
+			case 'events':	
+				$Where = 'where e.Meet='.arg(3).' and e.MtEv='.arg(4);
+				break;
+			case '':
+			}
+			
+			$query = "select m.MName, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke, e.Course from ".$tm4db.".mtevent_".$season." e, ".$tm4db.".meet_".$season." m ".$Where." and e.Meet=m.Meet";
+			$result = db_query($query);
+			$object = db_fetch_object($result);
+			drupal_set_title($object->MName."&nbsp;<br>");
+			//<br><p><b><small>Event: ".$object->MtEv.''.$object->MtEvX.' &nbsp;&nbsp;'.Gender($object->Sex).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.$object->Distance.'m &nbsp;'.Stroke($object->Stroke).' &nbsp;'.Course(1,$object->Course).'</small></b></p>');
+	
+
+			$headers[] = array('data' => t('#'), 'width' => '20px');
+			$headers[] = array('data' => t('Time'), 'width' => '60px');
+			$headers[] = array('data' => t('Athlete Name'), 'width' => '250px');
+			$headers[] = array('data' => t('M/F'), 'width' => '30px');
+			$headers[] = array('data' => t('Age'), 'width' => '40px');
+			$headers[] = array('data' => t('Team'), 'width' => '80px');
+			$headers[] = array('data' => t('Points'), 'width' => '30px');
+			$headers[] = array('data' => t('Best'), 'width' => '40px');
+
+			
+			
+			$query = "(select e.MtEvent, e.MtEv, e.MtEvX, e.Lo_Hi, e.Sex as ESex, e.Distance, e.Stroke, e.Course, ((r.SCORE -r2.SCORE)/100) AS improv, MIN(r2.SCORE) as fastest, a.Athlete, a.Last, a.First, a.Sex,r.F_P , If(r.PLACE>0,r.PLACE,'') As PLACE, r.NT, r.SCORE,IF(r.POINTS>0,Round(r.POINTS/10),'') as POINTS, r.Age, t.TCode, t.LSC"; 
+			$query.= " from (((".$tm4db.".mtevent_".$season." as e left join ".$tm4db.".result_".$season." as r on (e.MtEvent=r.MTEVENT)) left join ".$tm4db.".result_".$season." as r2 ON (r.STROKE=r2.STROKE AND r.DISTANCE=r2.DISTANCE and r.ATHLETE=r2.ATHLETE And r2.RANK=1)) left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE= a.Athlete)) left join ".$tm4db.".team_".$season." as t on (r.TEAM=t.Team) ";
+			$query.= $Where." GROUP BY r.MTEVENT, r.ATHLETE order by e.Meet,e.MtEv,e.MtEvX, r.F_P,r.NT,r.PLACE,r.SCORE)";
+			
+			//$output=$query;
+			$result = db_query($query);
+			
+			$output.= '<table><tr><td>';
+			//Grouping Fields
+			$F_P= NULL;
+			$Event=NULL;
+			$First = false;
+			while ($object = db_fetch_object($result))
+			{
+				if($Event <> $object->MtEvent)
+				{
+					$F_P = $object->F_P;
+					$Event = $object->MtEvent;
+					if($rows==NULL && $First)
+					$rows[] = array(array('data' => t('There are no results for this event, click '.l(t('here'), 'meets/'.arg(1).'/event/'.arg(3)).' to go back.'), 'colspan' => 8));
+					$First = true;
+					if($rows !=NULL)
+					$output.= theme('table', $headers, $rows).'<br>';
+					
+					$output.= "<br><br><p class='title' align='left'><b><small>Event: ".$object->MtEv.''.$object->MtEvX.' &nbsp;&nbsp;'.Gender($object->Sex).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.$object->Distance.'m &nbsp;'.Stroke($object->Stroke).' &nbsp;'.Course(1,$object->Course).'</small></b></p><br>';
+					//$output.= "<br><p class='title' align='left'><b>Event: ".$object->MtEvX.' &nbsp;&nbsp;'.Gender($object->ESex).' &nbsp;&nbsp;'.Age($object->Lo_Hi).' &nbsp;'.t(FP($object->F_P)).'s'.'</b></p>';
+					$output.= '<p align=\'center\'><b>'.t(FP($object->F_P)).'s</b></p>';
+					$rows = NULL;
+				}
+				
+				if($F_P <> $object->F_P)
+				{
+					$F_P = $object->F_P;
+					//Heading for Grouping
+					if($rows==NULL && $First)
+					$rows[] = array(array('data' => t('There are no results for this event, click '.l(t('here'), 'meets/'.arg(1).'/event/'.arg(3)).' to go back.'), 'colspan' => 8));
+					
+					if($rows !=NULL)                     
+					$output.= theme('table', $headers, $rows).'<br>';
+					$output.= '<p align=\'center\'><b>'.t(FP($object->F_P)).'s</b></p>';
+					$rows = NULL;
+				}
+				
+				$link = "swimmers_results/".arg(1)."/toptimes/".$object->Athlete;
+				if($object->PLACE>0)	
+				$rows[] = array($object->PLACE,Score($object->NT,$object->SCORE),( ($object->Last==NULL)?'Athlete not found':l(t($object->Last.", ".$object->First), $link)), $object->Sex, $object->Age, $object->TCode."-".$object->LSC ,$object->POINTS,' '.(($object->improv==0)?'':(($object->improv>0)?'+'.$object->improv:"<font color='#000099'><b>".$object->improv.'</b></font>')).'</small>');
+				else
+				$rows[] = array(NT($object->NT),get_time($object->SCORE),( ($object->Last==NULL)?'Athlete not found':l(t($object->Last.", ".$object->First), $link)), $object->Sex, $object->Age, $object->TCode."-".$object->LSC , $object->POINTS,'');
+				
+			}
+			
+			if (!$rows)
+			{
+				$rows[] = array(array('data' => t('There are no results for this event, click '.l(t('here'), 'meets/'.arg(1).'/event/'.arg(3)).' to go back.'), 'colspan' => 8));
+			}
+			$output.= theme('table', $headers, $rows);
+			$output.= '</td></tr></table>';
+			
+		} break;
+		
+		default:
+		{
+			drupal_set_title('Meets');
+			$headers[] = array('data' => t(''), 'width' => '20px');
+			$headers[] = array('data' => t('Meet'), 'width' => '300px');
+			$headers[] = array('data' => t('Start date'), 'width' => '90px');
+			$headers[] = array('data' => t('End date'), 'width' => '90px');
+			$headers[] = array('data' => t('Course'), 'width' => '40px');
+			$headers[] = array('data' => t('Location'));
+
+			$result = db_query("select DISTINCT IF(m.Start>CURDATE(),1,0) as results, m.Meet, m.MName, m.Start, m.End, m.Course, m.Location  from ".$tm4db.".meet_".$season." m, ".$tm4db.".mtevent_".$season." e where m.Meet=e.Meet and m.Start is not null and m.End is not null order by m.Start DESC");
+			while ($object = db_fetch_object($result))
+			{
+				$link = "meets/".arg(1)."/events/".$object->Meet;
+				$rows[] = array(l('I','meet_info/meet='.$object->Meet),($object->results==0)?l(t($object->MName), $link):$object->MName,get_date($object->Start), get_date($object->End), Course(0,$object->Course), $object->Location);
+			}
+			$output.= theme('table', $headers, $rows);
+		} break;
+	}*/
+	
+	return $output;
+}
+
+function theme_gala_results($form)
+{
+	$output = '<table border="0" cellspacing="0" cellpadding="0" background="modules/filterbanner.jpg" width="100%">';
+	$output.= '<tr>';
+	$output.= '<td>';
+	$output.= '<table border="0" cellspacing="0" cellpadding="0">';
+	$output.= '<tr>';
+	$output.= '<td style="font-size: 12pt; font-weight: bold;">&nbsp;&nbsp;&nbsp;Season :&nbsp;';
+	$output.= '</td>';
+	$output.= '<td>'.form_render($form['season']);
+	$output.= '</td>';
+	$output.= '<td width="5px">';
+	$output.= '</td>';
+	$output.= '<td>'.form_render($form['submit']);
+	$output.= '</td>';
+	$output.= '</tr>';
+	$output.= '</table>';
+	$output.= '</td>';
+//	$output.= '<td align="right" valign="middle" style="font-size: 10pt; color: #990000"><b><blink>Note: </blink></b>Some of the queries take long, namely Best Times LCM&nbsp;&nbsp;&nbsp;<br>These queries need to be optimized seriously!&nbsp;&nbsp;&nbsp;';
+//	$output.= '</td>';
+	$output.= '</tr>';
+	$output.= '</table>';
+	
+	return $output;
+}
+
+/* swimmers results
+******************************************************************************************/
+
+function perfanal_swimmers_results()
+{
+	$edit = $_POST["edit"];
+	$seasons = extract_seasons();
+	$tm4db = variable_get('perfanal_database', 'perfanal');
+
+	$season = ((arg(1)) ? arg(1) : $edit["season"]);
+	if (!$season)
+	{
+		$rev_seasons = array_reverse($seasons, true);
+		foreach ($rev_seasons as $key => $value)
+			$season = $key;
+	}
+
+//	echo $season;
+
+	$alphaselect = array('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z');
+
+	switch($_POST["op"])
+	{
+		case t('filter'):
+		{
+//			$season = (($edit["season"]) ? $edit["season"] : arg(1));
+			
+			$params = $season.
+					(($edit["club"]) ? '/'.$edit["club"] : '').
+					(($edit["age"]) ? '/'.$edit["age"] : '').
+					(($edit["filterby"]) ? '/'.$edit["filterby"] : '').
+					(($edit["filteropt"]) ? '/'.$edit["filteropt"] : '');
+					
+			drupal_goto('swimmers_results/'.$params);
+		} break;
+		
+		default:
+		{
+			/* load clubs for this season */
+			$club_list = array('A' => 'All Clubs');
+			$result = db_query("select * from ".$tm4db.".team_".$season." order by TCode");
+			while ($object = db_fetch_object($result))
+			{
+				$club_list[$object->Team] = $object->TCode;
+			} 
+			
+			/* load agegroups table */
+			$agegroup_list = NULL;
+			$result = db_query("select DISTINCT Lo_Hi, AgType from ".$tm4db.".hytekagegroup_".$season." where Course in ('L', 'S') order by Lo_Hi DESC");
+			while ($object = db_fetch_object($result))
+			{
+				$len = strlen($object->Lo_Hi);
+
+				$a2 = substr($object->Lo_Hi, strlen($object->Lo_Hi)-2, 2);
+				$a1 = substr($object->Lo_Hi, 0, strlen($object->Lo_Hi)-2);
+		
+				if ($len <= 2)
+				{
+					$agegroup_list['='.$object->Lo_Hi] = $object->Lo_Hi.' yrs';
+				} else
+				{		
+					if ($object->AgType == 1)
+					{
+						$agegroup_list['='.$a1] = $a1.' yrs';
+					} else if ($object->AgType == 2)
+					{
+						if ($a2 == "99")
+						{
+							if ($a1 != "99")
+								$agegroup_list['>='.$a1] = $a1.' & over';
+							else
+								$agegroup_list['<=99'] = "Open";
+						} else
+						{
+							$agegroup_list['between '.$a1.' and '.$a2] = $a1.' - '.$a2.' yrs';
+						}
+					}
+				}
+			}
+			$agegroup_list['<=8'] = '8 & under';
+			
+			/* generate filter options */
+			$filter_options['an'] = 'All Names';
+			$filter_options['ln'] = 'Last Name';
+			$filter_options['fn'] = 'First Name';
+			for ($i=65; $i<91; $i++)
+				$filter_options[chr($i)] = chr($i);
+
+			/* generate form */
+			if (!arg(1))
+			{
+				$form['season'] = array('#type' => 'select', '#options' => $seasons, '#default_value' => arg(1));
+			} else
+			{
+				$form['club'] = array('#type' => 'select', '#options' => $club_list, '#default_value' => arg(2));
+				$form['age'] = array('#type' => 'select', '#options' => $agegroup_list, '#default_value' => arg(3));
+				$form['filterby'] = array('#type' => 'select', '#options' => $filter_options, '#default_value' => arg(4));
+				$form['filteropt'] = array('#type' => 'textfield', '#size' => 15, '#default_value' => arg(5));
+			}
+			
+			$form['submit'] = array('#type' => 'submit', '#value' => t('filter'));
+			
+			$output = drupal_get_form('swimmers_results', $form);
+			$output.= theme('table', $headers, $rows);
+		} break;
+	}
+
+	if (arg(2) == "toptimes")
+	{
+		$object = db_fetch_object(db_query("select * from ".$tm4db.".athlete_".$season." where Athlete=".arg(3)));
+		drupal_set_title("swimmers results :: ".ucwords(strtolower($object->Last)).", ".ucwords(strtolower($object->First)));
+
+		//$stroke = array(1 => "Freestyle", 2 => "Back", 3 => "Breast", 4 => "Butterfly", 5 => "Medley");
+	
+		$result = db_query("select r.COURSE, r.NT, r.SCORE, r.DISTANCE, r.STROKE, m.MName, m.Start, r.F_P, r.MtEvent, m.Meet from ".$tm4db.".result_".$season." r, ".$tm4db.".meet_".$season." m where r.ATHLETE=".arg(3)." and r.MEET=m.Meet and r.I_R <> 'R' and r.SCORE > 0 order by r.COURSE, r.STROKE, r.SCORE");
+	
+		$header[] = array('data' => t('Time'), 'width' => '70px');
+		$header[] = array('data' => t('Distance'), 'width' => '70px');
+		$header[] = array('data' => t('Stroke'), 'width' => '80px');
+		$header[] = array('data' => t('Rounds'), 'width' => '50px');
+		$header[] = array('data' => t('Date'), 'width' => '90px');
+		$header[] = array('data' => t('Meet'), 'width' => '300px');
+
+		while ($object = db_fetch_object($result))
+		{
+			$time = Score($object->NT,$object->SCORE);	
+			$link = "gala_results/".arg(1)."/team/".$object->Meet."/".$object->MtEvent;
+			if (strtolower($object->COURSE) == "l")
+				$rowsL[] = array($time, $object->DISTANCE.'m', Stroke($object->STROKE), FP($object->F_P),get_date($object->Start), l(t($object->MName), $link));
+			if (strtolower($object->COURSE) == "s")
+				$rowsS[] = array($time, $object->DISTANCE.'m', Stroke($object->STROKE), FP($object->F_P), get_date($object->Start), l(t($object->MName), $link));
+		}
+
+//		$rowsL[] = array('data' => 'data embedded', 'colspan' => 6, 'align' => 'center');
+//		$rowsL[] = array('1', '2', '3', '4', '5', '6');
+	
+		$output.= "<br>Long Course - 50m";
+		$output.= theme('table', $header, $rowsL);
+		$output.= "<br>Short Course - 25m";
+		$output.= theme('table', $header, $rowsS);
+	
+	
+	} else
+	if ((arg(2)) && (arg(3)) && (arg(4)) && (!arg(6)) && (!arg(7)))
+	{
+		$header[] = array('data' => t('Club'), 'width' => '40px');
+		$header[] = array('data' => t('Surname'), 'width' => '120px');
+		$header[] = array('data' => t('Name'), 'width' => '120px');
+		$header[] = array('data' => t('M/F'), 'width' => '30px');
+		$header[] = array('data' => t('Age'), 'width' => '30px');
+
+		switch(arg(4))
+		{
+			case 'an':
+			{
+				$name_filter = "";
+			} break;
+			
+			case 'ln':
+			{
+				$name_filter = "Last like '%".arg(5)."%' and";
+			} break;
+
+			case 'fn':
+			{
+				if (arg(5))
+					$name_filter = "First like '%".arg(5)."%' and";
+				else
+					$name_filter = "Athlete=0 and";
+			} break;
+			
+			default:
+			{
+				$name_filter = "Last like '".arg(4)."%' and";
+			} break;
+		}
+
+		switch(arg(2))
+		{
+			case 'A':
+			{
+				$clubs_filter = NULL;
+			} break;
+			
+			default:
+			{
+				$clubs_filter = "Team1=".arg(2)." and";
+			} break;
+		}
+
+		$result = db_query("select * from ".$tm4db.".athlete_".$season." a, ".$tm4db.".team_".$season." t where ".$name_filter." ".$clubs_filter." a.Team1=t.Team and a._Group='A' and a.Age ".arg(3)." order by a.Last");
+		while ($object = db_fetch_object($result))
+		{
+			$link = "swimmers_results/".arg(1)."/".arg(2)."/".arg(3)."/".arg(4)."/".arg(5)."/toptimes/".$object->Athlete;
+			
+			if (strtolower($object->Sex) == "m")
+				$rowsM[] = array($object->TCode, l(t(ucwords(strtolower($object->Last))), $link), ucwords(strtolower($object->First)), $object->Sex, $object->Age);
+			else
+				$rowsF[] = array($object->TCode, l(t(ucwords(strtolower($object->Last))), $link), ucwords(strtolower($object->First)), $object->Sex, $object->Age);
+		}
+		
+		if (!$rowsM)
+			$rowsM[] = array(array('data' => t('No athletes available based the above criteria'), 'colspan' => 5));
+			
+		if (!$rowsF)
+			$rowsF[] = array(array('data' => t('No athletes available based the above criteria'), 'colspan' => 5));
+		
+		$output.= '<table width="100%">';
+		$output.= '<tr>';
+		$output.= '<td align="center" valign="top">'.theme('table', $header, $rowsM);
+		$output.= '</td>';
+		$output.= '<td align="center" valign="top">'.theme('table', $header, $rowsF);
+		$output.= '</td>';
+		$output.= '</tr>';
+		$output.= '</table>';
+	
+	} else
+	if ((arg(2)) && (arg(3)) && (arg(4)) && (arg(6)) && (arg(7)))
+	{
+		$nyear = arg(1)+1;
+		$season_title = arg(1).'/'.substr($nyear, strlen($nyear)-2, 2);
+		$object = db_fetch_object(db_query("select * from ".$tm4db.".athlete_".$season." where Athlete=".arg(7)));
+		drupal_set_title("swimmers results (".$season_title.") : ".ucwords(strtolower($object->Last)).", ".ucwords(strtolower($object->First)));
+
+		$stroke = array(1 => "Freestyle", 2 => "Back", 3 => "Breast", 4 => "Butterfly", 5 => "Medley");
+	
+		$header[] = array('data' => t('Time'), 'width' => '70px');
+		$header[] = array('data' => t('Distance'), 'width' => '70px');
+		$header[] = array('data' => t('Stroke'), 'width' => '80px');
+		$header[] = array('data' => t('Rounds'), 'width' => '50px');
+		$header[] = array('data' => t('Date'), 'width' => '90px');
+		$header[] = array('data' => t('Meet'), 'width' => '300px');
+
+		$key_lookup = array();
+		$result = db_query("select r.COURSE, r.SCORE, r.DISTANCE, r.STROKE, m.MName, m.Start, r.F_P, r.MtEvent, m.Meet from ".$tm4db.".result_".$season." r, ".$tm4db.".meet_".$season." m where r.ATHLETE=".arg(7)." and r.MEET=m.Meet and r.I_R <> 'R' and r.NT not in (2, 5) group by r.STROKE, r.DISTANCE order by r.STROKE, r.DISTANCE, r.SCORE");
+		while ($object = db_fetch_object($result))
+		{
+			$key_lookup[] = array($object->COURSE, $object->STROKE, $object->DISTANCE);
+		}
+	
+		for ($i=0; $i<count($key_lookup); $i++)
+		{
+			$query = "select r.NT, r.COURSE, r.SCORE, r.DISTANCE, r.STROKE, m.MName, m.Start, r.F_P, r.MtEvent, m.Meet from ";
+			$query.= $tm4db.".result_".$season." r, ".$tm4db.".meet_".$season." m, ".$tm4db.".mtevent_".$season." e where r.ATHLETE=".arg(7)." and r.MEET=m.Meet and r.MtEvent=e.MtEvent and e.I_R <> 'R'";
+			$query.= " and r.STROKE=".$key_lookup[$i][1]." and r.DISTANCE=".$key_lookup[$i][2];
+			$query.= " and r.SCORE > 0 and r.NT not in (2, 5) order by m.Start";
+
+			$result = db_query($query);
+//			drupal_set_message($query);
+	
+			$last_stroke = NULL;
+			$last_distance = NULL;
+			$rowsL = array();
+			$rowsS = array();
+			$graph_hdrs = array();
+			$graph_dataL = NULL;
+			$graph_dataS = NULL;
+			
+			while ($object = db_fetch_object($result))
+			{
+//				print_r($object);
+				
+				$time = Score(0,$object->SCORE);
+				$f_p = (strtolower($object->F_P) == 'f') ? 'Final' : 'Prelim';
+		
+				$start_date = explode("-", $object->Start);
+				$date = Date('d/m/Y', mktime(0, 0, 0, $start_date[1], $start_date[2], $start_date[0]));
+
+				$link = "gala_results/".arg(1)."/team/".$object->Meet."/".$object->MtEvent;
+				$graph_hdrs[] = $date;
+				
+				if (strtolower($object->COURSE) == "l")
+				{
+					$rowsL[] = array($time, $object->DISTANCE.'m', $stroke[$object->STROKE], $f_p, $date, l(t($object->MName), $link));
+					$graph_dataL.='0|';//t2d($time).'|';
+				} else
+				{
+					$graph_dataL.='-|';
+				}
+				
+				if (strtolower($object->COURSE) == "s")
+				{
+					$rowsS[] = array($time, $object->DISTANCE.'m', $stroke[$object->STROKE], $f_p, $date, l(t($object->MName), $link));
+					$graph_dataS.='0|';//t2d($time).'|';
+				} else
+				{
+					$graph_dataS.='-|';
+				}
+				
+				
+				$last_stroke = $object->STROKE;
+				$last_distance = $object->DISTANCE;
+			}
+
+			$splitterL = array();
+			$splitterS = array();
+
+			$splitterL[] = array(array('data' => '<div style="font-weight: bold; color: blue;">Long Course</div>', 'colspan' => 6));
+			$splitterS[] = array(array('data' => '<div style="font-weight: bold; color: orange;">Short Course</div>', 'colspan' => 6));
+			
+			$rows = array_merge($splitterL, $rowsL);
+			$rowsL = array_merge($rows, $splitterS);
+			$rows = array_merge($rowsL, $rowsS);
+
+			$graph_hdrs_data = NULL;
+			foreach($graph_hdrs as $key => $value)
+			{
+				$graph_hdrs_data.= $graph_hdrs[$key].'|';
+			}
+			$graph_hdrs_data = substr($graph_hdrs_data, 0, strlen($graph_hdrs_data)-1);
+			$graph_dataL = substr($graph_dataL, 0, strlen($graph_dataL)-1);
+			$graph_dataS = substr($graph_dataS, 0, strlen($graph_dataS)-1);
+
+			$graph_data = '?headers='.$graph_hdrs_data;
+			$graph_data.= (($graph_dataL) ? '&data='.$graph_dataL : '');
+			$graph_data.= (($graph_dataS) ? '&data2='.$graph_dataS : '');
+			
+			$gdataS[] = array('data' => '<img src="/jpgraph/grapher.php'.$graph_data.'">', 'colspan' => 6, 'align' => 'center');
+			$rows[] = $gdataS;
+
+			$output.= '<br><div style="font-weight: bold;">'.$last_distance.'m '.$stroke[$last_stroke].'</div><hr>';
+			$output.= theme('table', $header, $rows).'<br>';
+			$gdataS = NULL;
+			$rows   = NULL;
+			$rowsL  = NULL;
+			$rowsS  = NULL;
+		}
+	}
+	return $output;
+}
+
+function theme_swimmers_results($form)
+{
+	$output = '<table border="0" cellspacing="0" cellpadding="0" background="modules/filterbanner.jpg" width="100%">';
+	$output.= '<tr>';
+	$output.= '<td>';
+	$output.= '<table border="0" cellspacing="0" cellpadding="0">';
+	$output.= '<tr>';
+	$output.= '<td width="5px"></td>';
+
+	if ($form['season'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Season :&nbsp;</td><td>'.form_render($form['season']).'</td>';
+	} else
+	{
+		$nyear = arg(1)+1;
+		$season = '<font color="#990000">'.arg(1);
+		$season.= '</font><font color="#707070">/</font><font color="#990000">'.substr($nyear, strlen($nyear)-2, 2).'</font>';
+//		$output.= '<td width="5px"></td>';
+//		$output.= '<td style="font-size: 12pt; font-weight: bold;">Season :&nbsp;'.$season.'</td>';
+
+		drupal_set_title('swimmers results ('.$season.')');
+
+	}
+	
+	if ($form['club'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Club :&nbsp;</td><td>'.form_render($form['club']).'</td>';
+	}
+
+	if ($form['age'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Age :&nbsp;</td><td>'.form_render($form['age']).'</td>';
+	}
+
+	if ($form['filterby'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Filter By :&nbsp;</td><td>'.form_render($form['filterby']).'</td>';
+	}
+	
+	if ($form['filteropt'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td>'.form_render($form['filteropt']).'</td>';
+	}
+	
+	$output.= '<td width="5px"></td>';
+	$output.= '<td>'.form_render($form['submit']).'</td>';
+	$output.= '</tr>';
+	$output.= '</table>';
+	$output.= '</td>';
+	$output.= '</tr>';
+	$output.= '</table>';
+	
+	return $output;
+}
+
+/* rankings
+******************************************************************************************/
+
+function perfanal_rankings()
+{
+	$edit = $_POST["edit"];
+	$seasons = extract_seasons();
+	$tm4db = variable_get('perfanal_database', 'perfanal');
+
+	$season = ((arg(1)) ? arg(1) : $edit["season"]);
+	if (!$season)
+	{
+		$rev_seasons = array_reverse($seasons, true);
+		foreach ($rev_seasons as $key => $value)
+			$season = $key;
+	}
+	
+	switch($_POST["op"])
+	{
+		case t('load'):
+		{
+			$season = (($edit["season"]) ? $edit["season"] : arg(1));
+			$params = $season.(($edit["basedon"]) ? '/'.$edit["basedon"] : '');
+			drupal_goto('rankings/'.$params);
+		} break;
+		
+		case t('show'):
+		{
+			$season = (($edit["season"]) ? $edit["season"] : arg(1));
+			
+			switch(arg(2))
+			{
+				case 'T': /* Time */
+				{
+					$params = $season.
+							((arg(2)) ? '/'.arg(2) : arg(2)).'/display'.
+							(($edit["club"]) ? '/'.$edit["club"] : '').
+							(($edit["course"]) ? '/'.$edit["course"] : '').
+							(($edit["age"]) ? '/'.$edit["age"] : '').
+							(($edit["gender"]) ? '/'.$edit["gender"] : '').
+							(($edit["event"]) ? '/'.$edit["event"] : '');
+				} break;
+
+				case 'F': /* FINA Points */
+				{
+					$params = $season.
+							((arg(2)) ? '/'.arg(2) : arg(2)).'/display'.
+							(($edit["club"]) ? '/'.$edit["club"] : '').
+							(($edit["age"]) ? '/'.$edit["age"] : '').
+							(($edit["gender"]) ? '/'.$edit["gender"] : '');
+				} break;
+			}
+
+			drupal_goto('rankings/'.$params);
+		} break;
+		
+		default:
+		{
+			$stroke = array(1 => "Free", 2 => "Back", 3 => "Breast", 4 => "Butterfly", 5 => "Medley");
+		
+			if ((!arg(1)) || (!arg(2)))
+			{
+				$basedon_opt['T'] = 'Times';
+				$basedon_opt['F'] = 'FINA Points';
+		
+				$form['season'] = array('#type' => 'select', '#options' => $seasons, '#default_value' => arg(1));
+				$form['basedon'] = array('#type' => 'select', '#options' => $basedon_opt, '#default_value' => arg(2));
+				$form['submit'] = array('#type' => 'submit', '#value' => t('load'));
+			} else
+			{
+				/* load clubs for this season */
+				$club_list = array('A' => 'All');
+				$result = db_query("select * from ".$tm4db.".team_".$season." order by TCode");
+				while ($object = db_fetch_object($result))
+				{
+					$club_list[$object->Team] = $object->TCode;
+				}
+				
+				/* available courses */
+				$course_list['L'] = 'LCM 50m';
+				$course_list['S'] = 'SCM 25m';
+				
+				/* load agegroups table */
+				$agegroup_list = NULL;
+				$result = db_query("select DISTINCT Lo_Hi, AgType from ".$tm4db.".hytekagegroup_".$season." where Course in ('L', 'S') order by Lo_Hi DESC");
+				while ($object = db_fetch_object($result))
+				{
+					$len = strlen($object->Lo_Hi);
+
+					$a2 = substr($object->Lo_Hi, strlen($object->Lo_Hi)-2, 2);
+					$a1 = substr($object->Lo_Hi, 0, strlen($object->Lo_Hi)-2);
+		
+					if ($len <= 2)
+					{
+						$agegroup_list['='.$object->Lo_Hi] = $object->Lo_Hi;
+					} else
+					{		
+						if ($object->AgType == 1)
+						{
+							$agegroup_list['='.$a1] = $a1;
+						} else if ($object->AgType == 2)
+						{
+							if ($a2 == "99")
+							{
+								if ($a1 != "99")
+									$agegroup_list['>='.$a1] = $a1.' +';
+								else
+									$agegroup_list['<=99'] = "Open";
+							} else
+							{
+								$agegroup_list['between '.$a1.' and '.$a2] = $a1.' - '.$a2;
+							}
+						}
+					}
+				}
+				$agegroup_list['<=8'] = '8 & under';
+				
+				/* available genders */
+				if (arg(2) == 'F')
+					$gender_list['A'] = 'All';
+				$gender_list['M'] = 'Male';
+				$gender_list['F'] = 'Female';
+				
+				/* load events */
+//				$result = db_query("select DISTINCT STROKE, DISTANCE, Sex, COURSE from ".$tm4db.".mtevent_".$season." where Sex='M' and COURSE='L' order by STROKE, DISTANCE");
+				$result = db_query("select DISTINCT STROKE, DISTANCE, Sex, COURSE from ".$tm4db.".mtevent_".$season." order by STROKE, DISTANCE");
+				while ($object = db_fetch_object($result))
+				{
+					if (($object->DISTANCE != 62) && ($object->DISTANCE != 250))
+					{
+						$data = $object->DISTANCE.'|'.$object->STROKE;
+						$event_list[$data] = $object->DISTANCE.'m '.$stroke[$object->STROKE];
+					}
+				}
+
+				switch(arg(2))
+				{
+					case 'T': /* Time */
+					{
+						$form['club'] = array('#type' => 'select', '#options' => $club_list, '#default_value' => arg(4));
+						$form['course'] = array('#type' => 'select', '#options' => $course_list, '#default_value' => arg(5));
+						$form['age'] = array('#type' => 'select', '#options' => $agegroup_list, '#default_value' => arg(6));
+						$form['gender'] = array('#type' => 'select', '#options' => $gender_list, '#default_value' => arg(7));
+						$form['event'] = array('#type' => 'select', '#options' => $event_list, '#default_value' => arg(8));
+						$form['submit'] = array('#type' => 'submit', '#value' => t('show'));
+					} break;
+
+					case 'F': /* FINA Points */
+					{
+						$form['club'] = array('#type' => 'select', '#options' => $club_list, '#default_value' => arg(4));
+						$form['age'] = array('#type' => 'select', '#options' => $agegroup_list, '#default_value' => arg(5));
+						$form['gender'] = array('#type' => 'select', '#options' => $gender_list, '#default_value' => arg(6));
+						$form['submit'] = array('#type' => 'submit', '#value' => t('show'));
+					} break;
+				}
+			
+			}
+			
+			$output.= drupal_get_form('rankings', $form);
+		} break;
+	}
+	
+	switch(arg(3))
+	{
+		case 'display':
+		{
+			$event_options['50_FR'] = '50m Freestyle';
+			$event_options['100_FR'] = '100m Freestyle';
+			$event_options['200_FR'] = '200m Freestyle';
+			$event_options['400_FR'] = '400m Freestyle';
+			$event_options['800_FR'] = '800m Freestyle';
+			$event_options['1500_FR'] = '1500m Freestyle';
+
+			$event_options['50_BU'] = '50m Butterfly';
+			$event_options['100_BU'] = '100m Butterfly';
+			$event_options['200_BU'] = '200m Butterfly';
+			
+			$event_options['50_BA'] = '50m Backstroke';
+			$event_options['100_BA'] = '100m Backstroke';
+			$event_options['200_BA'] = '200m Backstroke';
+
+			$event_options['50_BR'] = '50m Breaststroke';
+			$event_options['100_BR'] = '100m Breaststroke';
+			$event_options['200_BR'] = '200m Breaststroke';
+			
+			$event_options['100_IM'] = '100m Individual Medley';
+			$event_options['200_IM'] = '200m Individual Medley';
+			$event_options['400_IM'] = '400m Individual Medley';
+		
+			switch(arg(2))
+			{
+				case 'T': /* Time */
+				{
+					$headers[] = array('data' => t('rank'), 'width' => '50px');
+					$headers[] = array('data' => t('time'), 'width' => '80px');
+					$headers[] = array('data' => t('FINA pts'), 'width' => '70px');
+					$headers[] = array('data' => t('last name'), 'width' => '150px');
+					$headers[] = array('data' => t('first name'), 'width' => '150px');
+					$headers[] = array('data' => t('age'), 'width' => '30px');
+					$headers[] = array('data' => t('club'), 'width' => '80px');
+					$headers[] = array('data' => t('meet'), 'width' => '200px');
+			
+					$event_data = explode("|", arg(8));
+					$distance = $event_data[0];
+					$stroke   = $event_data[1];
+
+					switch(arg(4))
+					{
+						case 'A':
+						{
+							$team_filter = NULL;
+						} break;
+				
+						default:
+						{
+							$team_filter = "a.Team1=".arg(4)." and";
+						} break;
+					}
+			
+					$query = "select DISTINCT a.ID_NO, r.RANK, r.SCORE, a.Last, a.First, a.Age, t.TCode, t.LSC, m.MName ";
+					$query.= "from ".$tm4db.".result_".$season." r, ".$tm4db.".athlete_".$season." a, ".$tm4db.".team_".$season." t, ".$tm4db.".meet_".$season." m ";
+					$query.= "where r.ATHLETE=a.Athlete and t.Team=a.Team1 and ".$team_filter." r.Course='".arg(5)."' and r.DISTANCE='".$distance."' and  r.STROKE=".$stroke." and m.Meet=r.MEET ";
+					$query.= "and a.Age ".arg(6)." and a.Sex='".arg(7)."' and r.I_R <> 'R' and r.SCORE > 0 and r.RANK=1 group by a.ID_NO order by r.SCORE";
+//					$query.= "and a.Age ".arg(6)." and a.Sex='".arg(7)."' and r.I_R <> 'R' and r.SCORE > 0 group by a.ID_NO order by r.SCORE";
+			
+					$result = db_query($query);
+			
+					$i = 1;
+
+					while ($object = db_fetch_object($result))
+					{
+						$split = substr($object->SCORE, strlen($object->SCORE)-2, 2);
+						$seconds = substr($object->SCORE, 0, strlen($object->SCORE)-2);
+						$time = Date('i:s', $seconds).'.'.$split;
+
+						$event_stroke = array(1 => "Freestyle", 2 => "Backstroke", 3 => "Breaststroke", 4 => "Butterfly", 5 => "Individual Medley");
+						$event_code = array_search($distance.'m '.$event_stroke[$stroke], $event_options);
+				
+						$fina_result = db_query("select * from {fina_scoring} where course='".arg(5)."C' and gender='".arg(7)."' and year between ".(arg(1)-3)." and ".(arg(1))." limit 1");
+						$fina_object = db_fetch_array($fina_result);
+						$fina_points = 1000 * (pow(($fina_object[$event_code] / t2d($time)), 3));
+				
+						$rows[] = array($i, $time, round($fina_points), ucwords(strtolower($object->Last)), ucwords(strtolower($object->First)),
+									$object->Age, $object->TCode.'-'.$object->LSC, $object->MName);
+						$i ++;
+					}
+		
+					$stroke_desc = array(1 => "Freestyle", 2 => "Back", 3 => "Breast", 4 => "Butterfly", 5 => "Medley");
+					drupal_set_title('rankings :: '.$distance.'m '.$stroke_desc[$stroke]);
+			
+					$output.= theme('table', $headers, $rows);
+				} break;
+
+				case 'F': /* FINA Points */
+				{
+					$headers[] = array('data' => t('rank'), 'width' => '50px');
+					$headers[] = array('data' => t('time'), 'width' => '80px');
+					$headers[] = array('data' => t('course'), 'width' => '50px');
+					$headers[] = array('data' => t('FINA pts'), 'width' => '70px');
+					$headers[] = array('data' => t('last name'), 'width' => '150px');
+					$headers[] = array('data' => t('first name'), 'width' => '150px');
+					$headers[] = array('data' => t('age'), 'width' => '30px');
+					$headers[] = array('data' => t('m/f'), 'width' => '30px');
+					$headers[] = array('data' => t('club'), 'width' => '80px');
+					$headers[] = array('data' => t('stroke'), 'width' => '200px');
+			
+					switch(arg(4))
+					{
+						case 'A':
+						{
+							$team_filter = NULL;
+						} break;
+				
+						default:
+						{
+							$object = db_fetch_object(
+								db_query("select * from ".$tm4db.".team_".$season." where team=".arg(4))
+								);
+							$team_filter = " team='".$object->TCode."' and ";
+						} break;
+					}
+			
+					switch(arg(6))
+					{
+						case 'A':
+						{
+							$gender_filter = NULL;
+						} break;
+				
+						default:
+						{
+							$gender_filter = " sex='".arg(6)."' and ";
+						} break;
+					}
+					
+					$where = 'where '.$team_filter.' '.$gender_filter.' age '.arg(5);
+			
+					$query = "select athlete, distance, stroke, course, min(score) as 'score', lastname, firstname, age, sex, team, lsc from ".$tm4db.".fina_rankings_".$season." ".$where." group by athlete, distance, stroke, course having min(score);";
+//					$query = "select athlete, min(score) as 'score', lastname, firstname, distance, age, sex, team, lsc, stroke, course from ".$tm4db.".fina_rankings_".$season." ".$where." group by athlete, distance, stroke";
+					$result = db_query($query);
+					
+					$i = 1;
+					$stroke_desc = array(1 => "Freestyle", 2 => "Back", 3 => "Breast", 4 => "Butterfly", 5 => "Medley");
+					while ($object = db_fetch_object($result))
+					{
+						$split = substr($object->score, strlen($object->score)-2, 2);
+						$seconds = substr($object->score, 0, strlen($object->score)-2);
+						$time = Date('i:s', $seconds).'.'.$split;
+
+						$event_stroke = array(1 => "Freestyle", 2 => "Backstroke", 3 => "Breaststroke", 4 => "Butterfly", 5 => "Individual Medley");
+						$event_code = array_search($object->distance.'m '.$event_stroke[$object->stroke], $event_options);
+						
+						if ($event_code)
+						{
+							$fina_result = db_query("select * from {fina_scoring} where course='".$object->course."C' and gender='".$object->sex."' and year between ".(arg(1)-3)." and ".(arg(1))." limit 1");
+							$fina_object = db_fetch_array($fina_result);
+							$fina_points = 1000 * (pow(($fina_object[$event_code] / t2d($time)), 3));
+						
+							$rows[] = array($i, $time, $object->course, round($fina_points), ucwords(strtolower($object->lastname)), ucwords(strtolower($object->firstname)),
+										$object->age, $object->sex, $object->team.'-'.$object->lsc, $object->distance."m ".$stroke_desc[$object->stroke]);
+							$i ++;
+						}
+					}
+		
+					drupal_set_title('rankings :: FINA Points');
+					if (!$rows)
+					{
+						$rows[] = array(array('data' => t('There are not athletes available based on your criteria above.'), 'colspan' => 9));
+					} else
+					{
+						$newrows = sort_by($rows, 3, $use = 'asc');
+						$trows = array_reverse($newrows);
+						$rows = array_slice($trows, 0, 100);
+					}
+					
+					$i = 1;
+					foreach($rows as $key => $value)
+					{
+						$rows[$key][0] = $i;
+						$i ++;
+					}
+					
+					$output.= theme('table', $headers, $rows);
+				} break;
+			}
+		
+
+		} break;
+	}
+		
+	return $output;
+}
+
+function theme_rankings($form)
+{
+	$output = '<table border="0" cellspacing="0" cellpadding="0" background="modules/filterbanner.jpg" width="100%">';
+	$output.= '<tr>';
+	$output.= '<td>';
+	$output.= '<table border="0" cellspacing="0" cellpadding="0">';
+	$output.= '<tr>';
+	$output.= '<td width="5px"></td>';
+
+	if ($form['season'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Season :&nbsp;</td><td>'.form_render($form['season']).'</td>';
+	} else
+	{
+		$nyear = arg(1)+1;
+		$season = '<font color="#990000">'.arg(1);
+		$season.= '</font><font color="#707070">/</font><font color="#990000">'.substr($nyear, strlen($nyear)-2, 2).'</font>';
+//		$output.= '<td width="5px"></td>';
+//		$output.= '<td style="font-size: 12pt; font-weight: bold;">Season :&nbsp;'.$season.'</td>';
+
+		drupal_set_title('rankings for season '.$season.' ');
+
+	}
+	
+	if ($form['basedon'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Based on :&nbsp;</td><td>'.form_render($form['basedon']).'</td>';
+	}
+
+	if ($form['club'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Club :&nbsp;</td><td>'.form_render($form['club']).'</td>';
+	}
+	
+	if ($form['course'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Course :&nbsp;</td><td>'.form_render($form['course']).'</td>';
+	}
+	
+	if ($form['age'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Age :&nbsp;</td><td>'.form_render($form['age']).'</td>';
+	}
+	
+	if ($form['gender'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Gender :&nbsp;</td><td>'.form_render($form['gender']).'</td>';
+	}
+	
+	if ($form['event'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Event :&nbsp;</td><td>'.form_render($form['event']).'</td>';
+	}
+	
+	$output.= '<td width="5px"></td>';
+	$output.= '<td>'.form_render($form['submit']).'</td>';
+	$output.= '</tr>';
+	$output.= '</table>';
+	$output.= '</td>';
+	$output.= '</tr>';
+	$output.= '</table>';
+	
+	return $output;
+}
+
+/* records
+******************************************************************************************/
+/*
+function perfanal_records()
+{
+	$edit = $_POST["edit"];
+	$seasons = extract_seasons();
+	$tm4db = variable_get('perfanal_database', 'perfanal');
+
+	$season = ((arg(1)) ? arg(1) : $edit["season"]);
+	if (!$season)
+	{
+		$rev_seasons = array_reverse($seasons, true);
+		foreach ($rev_seasons as $key => $value)
+			$season = $key;
+	}
+
+	$courses = array('LCM', 'SCM');
+
+	switch($_POST["op"])
+	{
+		case t('load'):
+		{
+			$edit = $_POST["edit"];
+			
+			$season = (($edit["season"]) ? $edit["season"] : arg(1));
+			$params = $season.(($edit["course"]) ? '/'.$edit["course"] : '');
+			drupal_goto('records/'.$params);
+		} break;
+
+		default:
+		{
+			$stroke = array(1 => "Freestyle", 2 => "Back", 3 => "Breast", 4 => "Butterfly", 5 => "Medley");
+
+			$form['season'] = array('#type' => 'select', '#options' => $seasons, '#default_value' => arg(1));
+			$form['course'] = array('#type' => 'select', '#options' => $courses, '#default_value' => arg(2));
+	
+			$form['submit'] = array('#type' => 'submit', '#value' => t('load'));
+		} break;
+	}
+	
+	$headers[] = array('data' => t('Age'), 'width' => '80px');
+	$headers[] = array('data' => t('Event'), 'width' => '100px');
+	$headers[] = array('data' => t('Record Time'), 'width' => '100px');
+	$headers[] = array('data' => t('Record Date'), 'width' => '100px');
+	$headers[] = array('data' => t('Team'), 'width' => '100px');
+	$headers[] = array('data' => t('Record Holder'));
+
+	$query = "select * from ".$tm4db.".records_".$season." where Course='".$courses[((arg(2)) ? arg(2) : 0)][0]."' and Record in (1, 8) order by Sex, Lo_Age, Hi_Age, Stroke, Distance, RecDate, RecTime";
+//	drupal_set_message($query);
+
+	$result = db_query($query);
+	while ($object = db_fetch_object($result))
+	{
+		$age = $object->Lo_Age.' - '.$object->Hi_Age;
+
+		if (($object->Lo_Age == 0) && ($object->Hi_Age < 99))
+		{
+			$age = $object->Hi_Age.' & under';
+		} else
+		if (($object->Lo_Age == 0) && ($object->Hi_Age == 99))
+		{
+			$age = 'open';
+		}
+
+		$event = $object->Distance.' '.$stroke[$object->Stroke];
+		
+		$split = substr($object->RecTime, strlen($object->RecTime)-2, 2);
+		$seconds = substr($object->RecTime, 0, strlen($object->RecTime)-2);
+		$rectime = Date('i:s', $seconds).'.'.$split;
+		$recdate = explode(' ', $object->RecDate);
+		
+		$team = $object->RecLSC.'-'.$object->RecTeam;
+		
+		if (strtolower($object->Sex) == 'f')
+			$rowsF[] = array($age, $event, $rectime, $recdate[0], $team, $object->RecText);
+		else
+		if (strtolower($object->Sex) == 'm')
+			$rowsM[] = array($age, $event, $rectime, $recdate[0], $team, $object->RecText);
+	}
+
+	$output = drupal_get_form('records', $form);
+
+	$output.= '<br>';
+	$output.= t('<strong>Records for Girls</strong> (sorry boys, you got bumbed to the list below this one *sob* scroll down)');
+	$output.= theme('table', $headers, $rowsF);
+	$output.= '<br><br>';
+	$output.= t('<strong>Records for Boys</strong> (sorry girls, you may be on top, but i think they just saving the best for last *grin*)');
+	$output.= '<hr>';
+	$output.= theme('table', $headers, $rowsM);
+	
+	return $output;
+}*/
+
+function theme_records($form)
+{
+	$output = '<table border="0" cellspacing="0" cellpadding="0" background="modules/filterbanner.jpg" width="100%">';
+	$output.= '<tr>';
+	$output.= '<td>';
+	$output.= '<table border="0" cellspacing="0" cellpadding="0">';
+	$output.= '<tr>';
+	$output.= '<td width="5px"></td>';
+
+	if ($form['season'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Season :&nbsp;</td><td>'.form_render($form['season']).'</td>';
+	}
+	
+	if ($form['course'])
+	{
+		$output.= '<td width="5px"></td>';
+		$output.= '<td style="font-size: 12pt; font-weight: bold;">Course :&nbsp;</td><td>'.form_render($form['course']).'</td>';
+	}
+	
+	$output.= '<td width="5px"></td>';
+	$output.= '<td>'.form_render($form['submit']).'</td>';
+	$output.= '</tr>';
+	$output.= '</table>';
+	$output.= '</td>';
+	$output.= '</tr>';
+	$output.= '</table>';
+	
+	return $output;
+}
+
+?>

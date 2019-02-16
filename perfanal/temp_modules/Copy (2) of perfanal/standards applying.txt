@@ -1,0 +1,207 @@
+left JOIN qtchamps as s on (r.Distance=s.Distance and r.Stroke=s.Stroke and )
+
+
+SELECT r.*,extract(YEAR FROM from_days(datediff(CurDate(), Birth))) as Ages From (result_2006 as r inner JOIN athlete_2006 as a on (r.athlete=a.athlete))
+ left JOIN qtchamps_2006 as s on (r.Distance=s.Distance and r.Stroke=s.Stroke and (r.I_R=s.I_R Or (r.I_R='L' and s.I_R='I')) and a.Sex=s.Sex AND Ages >= s.Lo_Age and Age <= s.Hi_Age )
+
+(Select *,extract(YEAR FROM from_days(datediff(CurDate(), Birth))) as Age FROM athlete_2006)
+
+
+SELECT a.*, r.*,s.* From ((result_2006 as r inner JOIN (Select *,extract(YEAR FROM from_days(datediff(CurDate(), Birth))) as Ages FROM athlete_2006) as a on (r.athlete=a.athlete))
+ left JOIN meet_2006 as m on (r.meet=m.meet))
+ 
+ left JOIN qtchamps_2006 as s on (r.Distance=s.Distance and r.Stroke=s.Stroke and (r.I_R=s.I_R Or (r.I_R='L' and s.I_R='I')) and a.Sex=s.Sex AND Ages >= s.Lo_Age and Ages <= s.Hi_Age )
+Where r.I_R!='R'
+
+
+(Select *,extract(YEAR FROM from_days(datediff(CurDate(), Birth))) as Ages FROM athlete_2006 as a left join team_2006 as t on (a.Team1=t.Team))
+
+
+
+SELECT a.*, r.*,s.* From ((result_2006 as r inner JOIN 
+(Select *,extract(YEAR FROM from_days(datediff(CurDate(), Birth))) as Ages FROM athlete_2006 as a left join team_2006 as t on (a.Team1=t.Team)) as a on 
+(r.athlete=a.athlete))
+left JOIN meet_2006 as m on (r.meet=m.meet))
+left JOIN qtchamps_2006 as s on (r.Distance=s.Distance and r.Stroke=s.Stroke and 
+(r.I_R=s.I_R Or (r.I_R='L' and s.I_R='I')) and a.Sex=s.Sex AND Ages >= s.Lo_Age and Ages <= s.Hi_Age )
+Where r.I_R!='R' and r.NT=0
+
+Select r.*, MIN(score2) as Score FROM (select m.MName,m.Start,r.Meet,r.I_R,r.Score as score2,r.Stroke,r.Distance,r.Course,
+extract(YEAR FROM from_days(datediff(CurDate(), a.Birth))) as Ages,a.*
+ FROM (result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet )) inner JOIN athlete_2006 as a on (r.athlete=a.athlete) WHERE m.Type='OF' and r.NT=0 and r.I_R !='R' order by a.athlete,stroke,distance,course,score) as r
+group BY athlete,stroke,distance,course
+
+
+
+
+Select  e.MtEv,e.MtEvX,e.Lo_Hi,e.Stroke,e.Distance,e.Sex,e.I_R,e.Session,e.Fee,floor(e.Lo_Hi/100) as lo, (e.Lo_Hi%100) as hi,s.* From mtevente_2006 as e left JOIN qtchamps_2006 as s on 
+(e.Distance=s.Distance and e.Stroke=s.Stroke and e.I_R=s.I_R and e.Sex=s.Sex
+ and floor(e.Lo_Hi/100) <= s.Lo_Age) and (e.Lo_Hi%100) >= s.Hi_Age Where e.Meet = 167 order by e.MtEv
+
+
+(Select r.*, MIN(score2) as Score FROM (select m.MName,m.Start,r.Meet,r.I_R,r.Score as score2,r.Stroke,r.Distance,r.Course,
+extract(YEAR FROM from_days(datediff(CurDate(), a.Birth))) as Ages,a.*
+ FROM (result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet )) inner JOIN athlete_2006 as a on (r.athlete=a.athlete) WHERE m.Type='OF' and r.NT=0 and r.I_R !='R' order by a.athlete,stroke,distance,course,score) as r
+group BY athlete,stroke,distance,course) as r
+
+
+
+
+
+
+
+
+
+
+Select * from
+
+(Select r.*, MIN(score2) as Score FROM (select m.MName,m.Start,r.Meet,r.I_R,r.Score as score2,r.Stroke,r.Distance,r.Course,
+extract(YEAR FROM from_days(datediff(CurDate(), a.Birth))) as Ages,a.*
+ FROM (result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet )) inner JOIN athlete_2006 as a on (r.athlete=a.athlete) WHERE m.Type='OF' and r.NT=0 and r.I_R !='R' order by a.athlete,stroke,distance,course,score) as r
+group BY athlete,stroke,distance,course) as r 
+
+left JOIN (r.stroke=e.STROKE and r.distance=e.DISTANCE and r.sex=e.sex and r.Ages>=e.lo and r.Ages <=e.hi)
+
+(Select  
+
+e.MtEv,e.MtEvX,e.Lo_Hi,e.Stroke,e.Distance,e.Sex,e.I_R,e.Session,e.Fee,floor(e.Lo_Hi/100) as 
+
+lo, (e.Lo_Hi%100) as hi,s.* From mtevente_2006 as e left JOIN qtchamps_2006 as s on 
+(e.Distance=s.Distance and e.Stroke=s.Stroke and e.I_R=s.I_R and e.Sex=s.Sex
+ and floor(e.Lo_Hi/100) <= s.Lo_Age) and (e.Lo_Hi%100) >= s.Hi_Age Where e.Meet = 167 and e.I_R='I' order 
+by e.MtEv) as e 
+
+
+
+
+
+
+Select * from
+
+(Select  
+
+e.MtEv,e.MtEvX,e.Lo_Hi,e.Stroke,e.Distance,e.Sex,e.I_R,e.Session,e.Fee,floor(e.Lo_Hi/100) as 
+
+lo, (e.Lo_Hi%100) as hi,s.* From mtevente_2006 as e left JOIN qtchamps_2006 as s on 
+(e.Distance=s.Distance and e.Stroke=s.Stroke and e.I_R=s.I_R and e.Sex=s.Sex
+ and floor(e.Lo_Hi/100) <= s.Lo_Age) and (e.Lo_Hi%100) >= s.Hi_Age Where e.Meet = 167 and e.I_R='I' order 
+by e.MtEv) as e 
+
+left JOIN 
+
+
+(Select r.*, MIN(score2) as Score FROM (select m.MName,m.Start,r.Meet,r.I_R,r.Score as score2,r.Stroke,r.Distance,r.Course,
+extract(YEAR FROM from_days(datediff(CurDate(), a.Birth))) as Ages,a.*
+ FROM (result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet )) inner JOIN athlete_2006 as a on (r.athlete=a.athlete)
+WHERE m.Type='OF' and r.NT=0 and r.I_R !='R' and a.athlete=634 order by a.athlete,stroke,distance,course,score) as r
+group BY athlete,stroke,distance,course) as r 
+
+on (r.stroke=e.STROKE and r.distance=e.DISTANCE and r.sex=e.sex)
+
+where r.Ages>=e.lo and r.Ages <=e.hi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Select * from
+
+(Select  
+
+e.MtEv,e.MtEvX,e.Lo_Hi,e.Stroke,e.Distance,e.Sex as ESex,e.I_R,e.Session,e.Fee,s.Lo_Age,s.Hi_Age,s.Sex From mtevente_2006 as e left JOIN SAAG07_2006 as s on 
+(e.Distance=s.Distance and e.Stroke=s.Stroke and e.I_R=s.I_R
+ and floor(e.Lo_Hi/100) <= s.Lo_Age and (e.Lo_Hi%100) >= s.Hi_Age and (e.Sex=s.Sex or e.Sex='X')) Where e.Meet = 167 and e.I_R='I' order 
+by e.MtEv) as e 
+
+left JOIN 
+
+
+(Select r.*, MIN(score2) as Score FROM (select m.MName,m.Start,r.Meet,r.I_R,r.Score as score2,r.Stroke,r.Distance,r.Course,
+extract(YEAR FROM from_days(datediff(CurDate(), a.Birth))) as Ages,a.*
+ FROM (result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet )) inner JOIN athlete_2006 as a on (r.athlete=a.athlete)
+WHERE m.Type='OF' and r.NT=0 and r.I_R !='R' order by a.athlete,stroke,distance,course,score) as r
+group BY athlete,stroke,distance,course) as r 
+
+on ((r.stroke=e.STROKE and r.distance=e.DISTANCE and r.sex=e.sex))
+
+where r.Ages>=e.Lo_Age and r.Ages <=e.Hi_Age order by athlete,r.stroke,r.distance
+
+
+
+Select r.*,If(Course='L',1,2) as p,  IF({S(0)}>0 OR {F(0)}>0 or {S(12)}>0 or {F(12)}>0,If(Course='S',-1,-2),1) as qt  from
+
+(Select  
+
+e.MtEv,e.MtEvX,e.Lo_Hi,e.Stroke,e.Distance,e.Sex as ESex,e.I_R,e.Session,e.Fee,s.Lo_Age,s.Hi_Age,s.Sex,
+s.`F(0)`,s.`S(0)`,s.`F(12)`,s.`S(12)` From mtevente_2006 as e left JOIN SAAG07_2006 as s on 
+(e.Distance=s.Distance and e.Stroke=s.Stroke and e.I_R=s.I_R
+ and floor(e.Lo_Hi/100) <= s.Lo_Age and (e.Lo_Hi%100) >= s.Hi_Age and (e.Sex=s.Sex or e.Sex='X')) Where e.Meet = 167 and e.I_R='I' order 
+by e.MtEv) as e 
+
+left JOIN 
+
+
+(Select r.*, MIN(score2) as Score, extract(YEAR FROM from_days(datediff(CurDate(), Birth))) as Ages FROM (select m.MName,m.Start,r.Meet,r.I_R,r.Score as score2,r.Stroke,r.Distance,r.Course,
+a.*
+ FROM (result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet )) inner JOIN athlete_2006 as a on (r.athlete=a.athlete)
+WHERE m.Type='OF' and r.NT=0 and r.I_R !='R' and a.athlete=634 order by a.athlete,stroke,distance,course,score) as r
+group BY athlete,stroke,distance,course) as r 
+
+on ((r.stroke=e.STROKE) and (r.distance=e.DISTANCE) and (r.sex=e.sex))
+
+where r.Ages>=e.Lo_Age and r.Ages <=e.Hi_Age order by athlete,e.MtEv,e.MtEvX
+
+
+
+
+
+
+
+Select r.*, e.Lo_Age,e.Hi_Age,e.Sex
+From SAAG07_2006 as e
+
+
+left JOIN 
+
+
+(Select r.*, MIN(score2) as Score, extract(YEAR FROM from_days(datediff(CurDate(), Birth))) as Ages FROM (select m.MName,m.Start,r.Meet,r.I_R,r.Score as score2,r.Stroke,r.Distance,r.Course,
+a.*
+ FROM (result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet )) inner JOIN athlete_2006 as a on (r.athlete=a.athlete)
+WHERE m.Type='OF' and r.NT=0 and r.I_R !='R'  order by a.athlete,stroke,distance,course,score) as r
+group BY athlete,stroke,distance,course) as r 
+
+on ((r.stroke=e.STROKE) and (r.distance=e.DISTANCE) and (r.sex=e.sex))
+
+where r.Ages>=e.Lo_Age and r.Ages <=e.Hi_Age order by athlete
+
+
+
+
+SELECT (Select `DESC` FROM code_2006 Where Type=1 AND ABBR=d.SubGr) as Grp,d.Sex,qt,Count(DISTINCT athlete)
+from
+(
+Select r.*, e.Lo_Age,e.Hi_Age,S0,F0,S12,F12,S1,F1,S13,F13,S2,F2,S14,F14, If(Course='L',IF(IF((S0>0)||(F0>0)||(S12>0)||(F12>0),IF(S12>0, If(S12>=Score,1,0),1) && IF(F12>0, If(F12<=Score,1,0),1),1),0,IF(IF((S1>0)||(F1>0)||(S13>0)||(F13>0),IF(S13>0, If(S13>=Score,1,0),1) && IF(F13>0, If(F13<=Score,1,0),1),1),1,IF(IF((S2>0)||(F2>0)||(S14>0)||(F14>0),IF(S14>0, If(S14>=Score,1,0),1) && IF(F14>0, If(F14<=Score,1,0),1),1),2, 99))),IF(IF((S0>0)||(F0>0)||(S12>0)||(F12>0),IF(S0>0, If(S0>=Score,1,0),1) && IF(F0>0, If(F0<=Score,1,0),1),1),0,IF(IF((S1>0)||(F1>0)||(S13>0)||(F13>0),IF(S1>0, If(S1>=Score,1,0),1) && IF(F1>0, If(F1<=Score,1,0),1),1),1,IF(IF((S2>0)||(F2>0)||(S14>0)||(F14>0),IF(S2>0, If(S2>=Score,1,0),1) && IF(F2>0, If(F2<=Score,1,0),1),1),2, 99)))) as qt From SAAG07_2006 as e left JOIN (Select r.*, MIN(score2) as Score, extract(YEAR FROM from_days(datediff('2007-02-24 00:00:00', Birth))) as Ages FROM (select m.MName,m.Start,r.Meet,r.I_R,r.Score as score2,r.Stroke,r.Distance,r.Course, a.* FROM (result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet )) inner JOIN athlete_2006 as a on (r.athlete=a.athlete) WHERE r.NT=0 and r.I_R !='R' and m.Type='OF' and r.Course!='Y' order by a.athlete,stroke,distance,course,score) as r group BY athlete,stroke,distance,course) as r on ((r.stroke=e.STROKE) and (r.distance=e.DISTANCE) and (r.sex=e.sex)) where r.Ages>=e.Lo_Age and r.Ages <=e.Hi_Age and Not(e.Lo_Age=0 and e.Hi_Age=99)  order by r.SubGr,r.Sex,athlete,stroke,distance,qt,course desc
+
+) as d  Group by d.SubGr,d.Sex,d.qt

@@ -1,0 +1,58 @@
+/*
+function rank_score($tm4db,$season,$Where)  // Points Rankings Function
+{
+	$headers[] = array('data' => t('#'), 'width' => '20px');
+	$headers[] = array('data' => t('Time'), 'width' => '60px');
+	$headers[] = array('data' => t('Athlete Name'), 'width' => '250px');
+	$headers[] = array('data' => t('M/F'), 'width' => '30px');
+	$headers[] = array('data' => t('Age'), 'width' => '30px');
+	$headers[] = array('data' => t('Team'), 'width' => '80px');
+	$headers[] = array('data' => t('Meet'));
+	
+	
+	
+	$query=page_pre()."Select r.MTEVENT,m.MName,a.Athlete, a.Last, a.First, a.Sex, a.age, r.SCORE, t.TCode, t.LSC, r.Age as sage";
+	$query.=" FROM (((".$tm4db.".result_".$season." as r left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left JOIN ".$tm4db.".team_".$season." as t on (r.Team=t.Team) ) left join ".$tm4db.".meet_".$season." as m on (r.Meet=m.Meet))";
+	$query.=" WHERE a.Group='A' and ".$Where." order by r.Score".pages_limit(null);
+	$output.=$query;
+	/*
+	
+	//No pre-ranking needed
+	$query = "Select *, MIN(res.Score) as mins FROM"; 
+	$query.= "(Select m.Meet,m.MName,a.Athlete, a.Last, a.First, a.Sex, a.age, r.SCORE, t.TCode, t.LSC, r.Age as sage";
+	$query.= " FROM (((".$tm4db.".result_".$season." as r left join ".$tm4db.".athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left JOIN ".$tm4db.".team_".$season." as t on (r.Team=t.Team) ) left join ".$tm4db.".meet_".$season." as m on (r.Meet=m.Meet)) ";
+	$query.= " WHERE r.I_R='I' and a.Athlete > 0 and r.NT=0 and ".$Where; // a.age >=15 and a.age <=16 and r.COURSE='L' and a.Sex='F'and r.Stroke=1 and r.Distance=50 and r.NT=0 and (DATEDIFF(m.Start,'".$season."-12-24') <=0)";
+	$query.= " order by  r.Athlete, r.Score)";
+	$query.= " as res GROUP by res.Athlete order by  res.Score";*/
+	
+	//$query="Select *, MIN(res.Score) as mins FROM (Select r.Meet,r.athlete,a.Last,a.First,r.result,r.Distance,r.Stroke,r.Course,r.NT,r.Score FROM ((swimdb.result_".$season." as r left join swimdb.athlete_".$season." as a on (r.ATHLETE=a.Athlete)) left join swimdb.meet_".$season." as m on (r.Meet=m.Meet)) WHERE a.age >=15 and a.age <=16 and r.COURSE='L' and a.Sex='F'and r.Stroke=1 and r.Distance=50 and r.NT=0 order by  r.Athlete, r.Score) as res GROUP by res.Athlete";
+	//$output.=$query;
+	db_query(' set @pos = 0,@pre = -1;');
+	$result = db_query($query);
+	//$output.=$query;
+	$pos = 0;
+	$pos2 = -1;
+	$point=NULL;
+	//Grouping
+	$First = false;
+	while ($object = db_fetch_object($result))
+	{
+
+		if($point != $object->SCORE)
+		{	
+			$point = $object->SCORE;
+			$pos++;
+		}
+		$link='athlete/top_times/'.$object->Athlete;
+		$rows[] = array((($pos ==$pos2)?'-':$pos),get_time($object->SCORE),l(t($object->Last.", ".$object->First), $link), $object->Sex, $object->age, $object->TCode."-".$object->LSC,l($object->MName,'meets/event/results/'.$object->MTEVENT));
+		if($pos != pos2)
+		$pos2 = $pos;
+	}
+	if (!$rows)
+	{
+		$rows[] = array(array('data' => t('There are no athletes results found matching your criteria, click '.l(t('here'), 'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5)).' to go back.'), 'colspan' => 7));
+	}
+	$output.= theme('table', $headers, $rows);
+	return $output;
+}
+

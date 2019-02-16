@@ -1,0 +1,76 @@
+Set @grp='9';
+
+update result_2006 as r
+
+set r.RBest = if(@grp != (@grp:=r.athlete+r.COURSE+r.STROKE+r.distance+r.athlete),2,0)
+
+
+Where r.athlete = 1334
+order by r.Athlete,r.Course,r.Stroke,r.Distance,r.score
+
+
+
+Select Athlete,Course,Stroke,Distance,Score,RBest From result_2006 WHERE athlete=1334 order by Athlete,Course,Stroke,Distance,RBest desc
+
+
+
+Select Athlete,Course,Stroke,Distance,Score,RBest,NT,I_R From result_2006 WHERE athlete=1334 order 
+
+by Athlete,Course,Stroke,Distance,RBest desc
+
+
+
+
+
+
+Set @grp='9';
+
+update result_2006 as r
+
+set r.RBest = if((@grp != (@grp:=r.athlete+r.COURSE+r.STROKE+r.distance+r.athlete+r.NT+r.I_R) and r.NT=0 and r.I_R != 'R'),1,0)
+
+order by r.Athlete,r.Course,r.Stroke,r.Distance,r.score;
+
+
+
+update result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet) inner join athlete_2006 as a on (r.athlete = a.athlete)
+
+WHERE (DATEDIFF(m.END,'2006/01/01') <=-2) and a.
+
+
+update result_2006 as r inner JOIN meet_2006 as m on (r.meet=m.meet) inner join team_2006 as t on (r.team = t.team)
+Set r.RBest = 2
+WHERE r.I_R !='R' and (DATEDIFF(m.END,'2006/01/01') <=-2) and t.tcntry ='RSA'
+
+
+SELECT m.Meet From swimsa.meet_2006 as m Where (DATEDIFF(m.END,'2007-04-15') <=-2)
+
+
+
+
+
+update result_2006 as r
+set r.RBest = 0;
+
+Set @grp='9';
+
+update result_2006 as r
+
+set r.RBest = if((@grp != (@grp:=r.athlete+r.COURSE+r.STROKE+r.distance+r.athlete+r.NT+r.I_R) and r.NT=0 and r.I_R != 'R'),1,0)
+Where r.meet in (SELECT m.Meet From swimsa.meet_2006 as m Where (DATEDIFF(m.END,'2007-01-15') <=-2))
+order by r.Athlete,r.Course,r.Stroke,r.Distance,r.score;
+
+select count(*) as c from result_2006 Where RBest !=0
+
+
+
+
+Set @grp='9';
+
+update result_2006 as r
+
+set r.RBest = if((@grp != (@grp:=r.athlete+r.COURSE+r.STROKE+r.distance+r.athlete+r.NT+r.I_R) and r.NT=0 and r.I_R != 'R'),1,0)
+Where r.meet in (SELECT m.Meet From swimsa.meet_2006 as m Where (DATEDIFF(m.END,'2007-04-15') <=-2))
+and  r.team in (Select team from team_2006 Where TCntry='RSA')
+order by r.Athlete,r.Course,r.Stroke,r.Distance,r.score;
+

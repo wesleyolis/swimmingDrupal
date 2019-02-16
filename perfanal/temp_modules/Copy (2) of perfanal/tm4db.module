@@ -1,0 +1,19 @@
+<?php
+
+function tm4db_perm() {
+  return array("access tm4db", "administer tm4db");
+}
+
+function tm4db_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+
+    
+
+  }
+
+  return $items;
+}
+
+?>

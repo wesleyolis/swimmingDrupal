@@ -1,0 +1,20 @@
+td.red {
+  background-color:#FF9999
+}
+td.green{
+background-color: #CCFF99
+}
+td.yellow{
+background-color: #FFFF99
+}
+
+td.yellow.min,td.red.min,td.green.min{
+border:2px solid #000080;
+}
+
+td.yellow.min.popup,td.red.min.popup,td.green.min.popup{
+position: relative;width:0;height:0;z-index:1; top:6px
+}
+td.popup,td.popup,td.popup{
+position: relative;width:0;height:0;z-index:1; top:6px;
+}

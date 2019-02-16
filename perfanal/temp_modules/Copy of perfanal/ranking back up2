@@ -1,0 +1,304 @@
+
+/*
+function perfanal_ranking()
+{
+	$edit = $_POST["edit"];
+	$seasons = extract_seasons();
+	$tm4db = variable_get('perfanal_database', 'perfanal');
+	$min_display = variable_get('perfanal_min_display', '20');
+	$lsc = variable_get('perfanal_lsc', '');
+	$cntry = variable_get('perfanal_cntry', '');
+	
+	
+	$season = (($edit["season"]) ? $edit["season"] : '');
+	if (!$season)
+	{
+		$rev_seasons = array_reverse($seasons, true);
+		foreach ($rev_seasons as $key => $value)
+			$season = $key;
+	}
+	/*
+			$WeekDays = date("W");
+			$WeekDays = (($WeekDays%2)*7);
+			$days = date("N");$date->modify("+1 day");
+			$res = getDate();
+			$res = $res->modify('-'.($WeekDays+$days-1).' day');
+			$output = ' dsdsf';
+			$output.= ' '.$res;*/
+			
+	
+	
+	$type = Array('indi_points'=>'Individual Points','team_points'=>'Team Points','score'=>'Times','fina'=>'Fina');
+	
+	if(arg(1) ==null) //Rankings type
+	{
+		
+		drupal_set_title($lsc." Rankings Categories");
+		$output.='<br>'.l('Individual Points','ranking/indi_points').'<br><br>';
+		$output.=l('Team Points','ranking/team_points').'<br><br>';
+		$output.=l('Times','ranking/score').'<br><br>';
+		$output.=l('Fina','ranking/fina').'<br>Allows performance comparison across strokes<br>and sprinters against long distance athletes.';
+		return $output;
+		
+	}else if(arg(1)=='info')
+	{
+		drupal_set_title($lsc." Rankings Information");
+		
+		$last_ranking = variable_get('perfanal_ranking_last_update', getDate());
+		$update = variable_get('perfanal_ranking_update', 'W');
+		$period = variable_get('perfanal_ranking_period', '2');
+		
+		$output.="<br/>The current rankings is ".$last_ranking.".<br/><br/>";
+		If($update=='M')
+		$output.="They are updated on a Monthly basis.<br/><br/>";
+		else
+		$output.="They are updated every ".$period." Weeks.<br/><br/>";
+		
+		$output.="Athlete's age's are determined as at the current rankings date. (".$last_ranking.")<br/>";
+		$output.="Age group filters look at the athlete's age as of the current rankings date.<br/><br/>";
+		$output.="Meet Results that are consider for rankings must have ended 2 days prior to the rankings date. (".$last_ranking.")<br/>";
+		$output.="To view list of meets including in this rankings set click the Meets link on rankings page.<br/>";
+
+		return t($output);
+		
+	} else if(arg(2)==null) //Meet type
+	{
+		drupal_set_title($lsc.' '.$type[arg(1)].' Rankings');
+		drupal_set_breadcrumb(array(l('Categories','ranking/')));
+		return  Meet_Type_Table('ranking/'.arg(1),$tm4db,$season);
+	}
+	else if(arg(3) ==null) // Course
+	{
+		drupal_set_title(arg(2).' '.$lsc.' '.$type[arg(1)].' Rankings');
+		drupal_set_breadcrumb(array(l('Categories','ranking/'),l('Meet Type','ranking/'.arg(1))));
+		$output="<br>Please Select a course.<br><br>";
+		if(arg(1) =='indi_points' || arg(1) =='team_points' || arg(1) =='fina')
+		$output.=l('All Courses','ranking/'.arg(1).'/'.arg(2).'/ALL').'<br><br>';
+		$output.=l('Short Course 25m','ranking/'.arg(1).'/'.arg(2).'/S').'<br><br>';
+		$output.=l('Long Course 50m','ranking/'.arg(1).'/'.arg(2).'/L').'<br><br>';
+		//$output.=l('Yards','ranking/'.arg(1).'/'.arg(2).'/Y').'<br><br>';
+		return $output;
+	}else if(arg(4) ==null || arg(5) ==null)//Age group and gender
+	{
+		$age_groups = Array(99,8,910,1112,1314,1516,1799);
+		drupal_set_title($lsc.' '.arg(2).' '.Course(1,arg(3)).' '.$type[arg(1)].' Rankings');
+		drupal_set_breadcrumb(array(l('Categories','ranking/'),l('Meet Type','ranking/'.arg(1)),l('Course','ranking/'.arg(1).'/'.arg(2))));
+		$headers[] = array('data' => t('Female'), 'width' => '100px');
+		$headers[] = array('data' => t('Male'), 'width' => '100px');
+		$headers[] = array('data' => t('Mixed'), 'width' => '100px');
+		foreach($age_groups as $gp)
+		{
+		$rows[] = array(l(Age($gp),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/female/'.$gp),l(Age($gp),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/male/'.$gp),l(Age($gp),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/mixed/'.$gp));	
+		}
+		
+		$output.= theme('table', $headers, $rows);
+		return $output;
+		
+	}else{
+		
+		// Creating the rankings periods
+					
+			$last_ranking = variable_get('perfanal_ranking_last_update', getDate());
+			$update = variable_get('perfanal_ranking_update', 'W');
+			$period = variable_get('perfanal_ranking_period', '2');
+			if($update=='W')
+			{
+				$result = db_query("SELECT SUBDATE(CURDATE(),((WEEK(CURDATE(),1)%".$period.")*7)+ DAYOFWEEK(CURDATE())-1+IF(DAYOFWEEK(CURDATE())=1,7,0)) as dt ");
+				$object = db_fetch_object($result);
+				$rankdate = $object->dt ;
+			}else{
+				$result = db_query("SELECT LAST_DAY(SUBDATE(CURDATE(),INTERVAL 1 MONTH)) as dt");
+				$object = db_fetch_object($result);
+				$rankdate = $object->dt ;
+			}
+			
+			
+			if($last_ranking != $rankdate)
+			{	//Updates Athelte Ages
+				$query.="UPDATE ".$tm4db.".athlete_".$season." as a Set a.Age = extract(YEAR FROM from_days(datediff('".$rankdate."', a.Birth)))";
+				//$output.=$query;
+				db_query($query);
+				//Updates ranking order
+				
+				//team filters
+				$filter='';
+				if($cntry!='' || $lsc!='')
+				$filter.=" and  r.team in (Select team from ".$tm4db.".team_".$season." Where TCntry='".$cntry."' ".(($lsc=='')?'':(($cntry=='')?'':' and ')." lsc='".$lsc."'").")";
+				
+				
+				
+					//All Meet Type's
+					db_query("Update ".$tm4db.".result_".$season." as r Set r.RAll = 0");
+		
+					db_query("set @grp='%d'",9);
+					$query=" update ".$tm4db.".result_".$season." as r";
+					$query.=" set r.RAll = if((@grp != (@grp:=r.athlete+r.COURSE+r.STROKE+r.distance+r.athlete+r.NT+r.I_R) and r.NT=0 and r.I_R != 'R'),1,2)";
+					$query.=" Where r.meet in (SELECT m.Meet From ".$tm4db.".meet_".$season." as m Where (DATEDIFF(m.END,'".$rankdate."') <=-2))";
+					$query.=$filter; // append team filters
+					$query.=" order by r.Athlete,r.Course,r.Stroke,r.Distance,r.score;";
+
+					/* Odr rankings pre query
+					$query="Update ".$tm4db.".result_".$season." as up,(select Min(rs.Score),rs.result From (Select straight_join r.athlete,r.course,r.stroke,r.distance,r.score,r.result From ".$tm4db.".meet_".$season." as m, ".$tm4db.".result_".$season." as r Where(DATEDIFF(m.END,'".$rankdate."') <=-2) and (m.Meet = r.Meet) and r.I_R='I' and r.NT=0 order by r.athlete,r.course,r.stroke,r.distance,r.score) as rs Group by rs.athlete,rs.course,rs.stroke,rs.distance) as res";
+					$query.=" Set up.RAll = 1 WHERE up.result=res.result";
+					*/
+					//$output.=$query;
+					db_query($query);
+					
+					//Meet Type Groups
+					/*$result = db_query("Update ".$tm4db.".result_".$season." as p Set p.RType = 0");
+					
+					$query="Update ".$tm4db.".result_".$season." as up,(select Min(rs.Score),rs.result From (Select straight_join m.Type,r.athlete,r.course,r.stroke,r.distance,r.score,r.result From ".$tm4db.".meet_".$season." as m, ".$tm4db.".result_".$season." as r Where trim(m.Type)!=''  and (DATEDIFF(m.END,'".$rankdate."') <=-2) and (m.Meet = r.Meet) and r.I_R='I' and r.NT=0 order by m.Type,r.athlete,r.course,r.stroke,r.distance,r.score) as rs Group by rs.Type,rs.athlete,rs.course,rs.stroke,rs.distance) as res";
+					$query.=" Set up.RType = 1 WHERE up.result=res.result";
+					$result = db_query($query);	*/
+					//=$output.=$query;
+				variable_set('perfanal_ranking_last_update', $rankdate);
+				$last_ranking = $rankdate;
+				
+				//update fina points
+			}
+
+		//Rankings period ended
+		
+		
+		// Set up where conditioning
+		//extract(YEAR FROM from_days(datediff(curdate(), a.Birth)))
+			$Where = "";
+			if(arg(1)=='team_points')
+			$Where.=" r.AGE >=".floor(arg(5)/100)." and r.AGE <=".(arg(5)%100)." ";
+			else
+			$Where.=" a.age >=".floor(arg(5)/100)." and a.age <=".(arg(5)%100)." ";
+			//$Where.= " and (DATEDIFF(m.Start,'".$last_ranking."') <=0)";
+			if(arg(1)=='team_points' || arg(1)=='indi_points')
+			{
+				if(arg(2) != 'ALL')
+				$Where.= " and m.Type ='".arg(2)."' and r.RType=True";
+				else
+				$Where.= " and r.RAll>0";
+			}
+			else
+			{
+				if(arg(2) != 'ALL')
+				$Where.= " and m.Type ='".arg(2)."' and r.RType=True";
+				else
+				$Where.= " and r.RAll=1";
+			}
+			if(arg(3) != 'ALL')
+			$Where.= " and r.COURSE='".arg(3)."' ";
+			switch(arg(4))
+			{
+				case 'female': $Where.= " and a.Sex='F'";
+				break;
+				case 'male': $Where.= " and a.Sex='M'";
+				break;
+			}
+			if($lsc != '')
+			$Where.= " and t.LSC='".$lsc."' ";
+			
+		//Display Rankings Title
+		//$output.="<p style='padding:5px;'  class='title' align='right'><small>As of ".$last_ranking."</small></p>";
+		$output.="<p style='padding:5px;' align='right'>".((arg(1)=='fina')?l('Base Times','fina/base_times/2004/'.arg(3)).' | ':'').l('Meets','meets/'.arg(2).'/'.$last_ranking)." | ".l('Detailed Information','ranking/info')."</p>";
+		drupal_set_breadcrumb(array(l('Categories','ranking/'),l('Meet Type','ranking/'.arg(1)),l('Course','ranking/'.arg(1).'/'.arg(2)),l('Age Group & Gender','ranking/'.arg(1).'/'.arg(2).'/'.arg(3))));
+		
+		//Desided what rankings display
+		
+		drupal_set_title($lsc.' '.$type[arg(1)].' Rankings as of '.$last_ranking.'<br><small>'.arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.Course(1,arg(3)).'</small> ');
+		if(arg(1)=='indi_points') //Dsiplay Individual Points Rankings
+		{
+			return $output.Indi_Points2($tm4db,$season,$Where);
+		} else if(arg(1)=='team_points') // Display team Points Rankings
+		{
+			return $output.team_points($tm4db,$season,$Where);
+			
+		}else if(arg(6)==null || arg(7) ==null) // Stroke Distance selection
+		{
+			if(arg(1)=='score')
+			{
+				if(arg(3)=='S')
+				$age_groups[] = Array(25,25,25,25,null);
+				$age_groups[] = Array(50,50,50,50,null);
+				$age_groups[] = Array(100,100,100,100,100);
+				$age_groups[] = Array(200,200,200,200,200);
+				$age_groups[] = Array(400,null,null,null,400);
+				$age_groups[] = Array(800);
+				$age_groups[] = Array(1500);
+				
+				drupal_set_title($lsc.' '.'Rankings'." as of ".$last_ranking."<br/><small>".arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.Course(1,arg(3)).' '.$type[arg(1)].'</small>');
+				$headers[] = array('data' => t(Stroke(1)), 'width' => '80px');
+				$headers[] = array('data' => t(Stroke(2)), 'width' => '80px');
+				$headers[] = array('data' => t(Stroke(3)), 'width' => '80px');
+				$headers[] = array('data' => t(Stroke(4)), 'width' => '80px');
+				$headers[] = array('data' => t(Stroke(5)), 'width' => '80px');
+	
+				
+				foreach($age_groups as $gp)
+				{
+					$rows[] = array((($gp[0]!=null)?l($gp[0].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/1/'.$gp[0]):'-'),
+					(($gp[1]!=null)?l($gp[1].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/2/'.$gp[1]):'-'),
+					(($gp[2]!=null)?l($gp[2].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/3/'.$gp[2]):'-'),
+					(($gp[3]!=null)?l($gp[3].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/4/'.$gp[3]):'-'),
+					(($gp[4]!=null)?l($gp[4].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/5/'.$gp[4]):'-'));	
+				}
+				
+				$output.= theme('table', $headers, $rows);
+				return $output;
+			}
+			else
+			if(arg(1)=='fina'){
+				
+				$age_groups[] = Array(50,1,1,1,1,null);
+				$age_groups[] = Array(100,1,1,1,1,1);
+				$age_groups[] = Array(200,1,1,1,1,1);
+				$age_groups[] = Array(400,1,null,null,null,1);
+				$age_groups[] = Array(800,1);
+				$age_groups[] = Array(1500,1);
+				
+				drupal_set_title($lsc.' '.'Rankings'." as of ".$last_ranking."<br/><small>".arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.Course(1,arg(3)).' '.$type[arg(1)].'</small>');
+				$headers[] = array('data' => t('Distance'), 'width' => '70px');
+				$headers[] = array('data' => l(Stroke(1),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/1/All'), 'width' => '60px');
+				$headers[] = array('data' => l(Stroke(2),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/2/All'), 'width' => '60px');
+				$headers[] = array('data' => l(Stroke(3),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/3/All'), 'width' => '60px');
+				$headers[] = array('data' => l(Stroke(4),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/4/All'), 'width' => '60px');
+				$headers[] = array('data' => l(Stroke(5),'ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/5/All'), 'width' => '60px');
+	
+				
+				foreach($age_groups as $gp)
+				{
+					$rows[] = array((($gp[0]!=null)?l($gp[0].'m','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/All/'.$gp[0]):'-'),
+					(($gp[1]==1)?theme_image('modules/perfanal/images/tick.gif','*'):'-'),
+					(($gp[2]==1)?theme_image('modules/perfanal/images/tick.gif','*'):'-'),
+					(($gp[3]==1)?theme_image('modules/perfanal/images/tick.gif','*'):'-'),
+					(($gp[4]==1)?theme_image('modules/perfanal/images/tick.gif','*'):'-'),
+					(($gp[5]==1)?theme_image('modules/perfanal/images/tick.gif','*'):'-'));	
+				}
+				
+				$output.=l('Overall Fina Points','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5).'/All/All').' - Regardless of Stroke or Distance';
+				$output.='<br/><br/>';
+				
+				$output.= theme('table', $headers, $rows);
+				return $output;
+			}
+		}else{
+			drupal_set_breadcrumb(array(l('Categories','ranking/'),l('Meet Type','ranking/'.arg(1)),l('Course','ranking/'.arg(1).'/'.arg(2)),l('Age Group & Gender','ranking/'.arg(1).'/'.arg(2).'/'.arg(3)),l('Distance & Stroke','ranking/'.arg(1).'/'.arg(2).'/'.arg(3).'/'.arg(4).'/'.arg(5))));
+			
+			if(arg(1)=='score') // Display Times Rankings
+			{
+				drupal_set_title($lsc.' '.$type[arg(1)].' Rankings'." as of ".$last_ranking."<br/><small>".arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.arg(7).'m '.Stroke(arg(6)).' '.Course(1,arg(3)).'</small>');
+				$Where.= " and r.Stroke=".arg(6)." ";
+				$Where.= " and r.Distance=".arg(7)." ";
+				return $output.rank_score($tm4db,$season,$Where);
+				
+			}else if(arg(1)=='fina') // Display Fina Rankings
+			{
+				drupal_set_title($lsc.' '.$type[arg(1)].' Rankings'." as of ".$last_ranking."<br/><small>".arg(2).' '.Gender(arg(4)).' '.Age(arg(5)).' '.((arg(6)=='All' & arg(7)=='All')?'Overall':(((arg(7)=='All')?'':arg(7).'m ').((arg(6)=='All')?'':Stroke(arg(6))))).' '.Course(0,arg(3)).'</small>');
+				if(arg(6)!='All')
+				$Where.= " and r.Stroke=".arg(6)." ";
+				if(arg(7)!='All')
+				$Where.= " and r.Distance=".arg(7)." ";
+				//$Where.= "and f.years=2004 ";
+				return $output.rank_fina($tm4db,$season,$Where);
+			}
+		}
+	}
+	
+}*/
+

@@ -1,0 +1,212 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"><head><!-- Note: does not validate. We would like it to, but that would mean reduced user experience for the majority of our visitors. --><title>Memcache API and Integration | drupal.org</title>
+
+ 
+  
+  
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="shortcut icon" href="http://drupal.org/misc/favicon.ico" type="image/x-icon">
+  <style type="text/css" media="all">@import "/files/css/c5dfbb2fdb39bda0835e09f18ed5281e.css";</style>
+    <link rel="stylesheet" href="memcache_files/print.css" media="print"></head><body>
+  <div id="contentwrapper">
+   <div id="header">
+        <a href="http://drupal.org/" title="Index page"><img id="logo" src="memcache_files/drupal.png" alt="Logo"></a>
+    
+    <div id="tabfloat">
+        <ul id="primary-links">
+          <li><a href="http://drupal.org/contact">Contact</a></li>
+          <li><a href="http://drupal.org/contribute">Contribute</a></li>
+          <li><a href="http://drupal.org/forum">Forum</a></li>
+          <li><a href="http://drupal.org/support">Support</a></li>
+          <li><a href="http://drupal.org/project">Download</a></li>
+          <li><a href="http://drupal.org/handbooks">Handbooks</a></li>
+         </ul>
+        </div>
+
+               <form action="/search/node" accept-charset="UTF-8" method="post" id="search-theme-form">
+<div><div id="search"><div class="wrap"><div class="form-item">
+ <input maxlength="128" name="search_theme_form_keys" id="edit-search-theme-form-keys" size="15" value="" title="Enter the terms you wish to search for." class="form-text" type="text">
+</div>
+<input name="op" id="edit-submit" value="Search" class="form-submit" type="submit">
+<input name="form_id" id="edit-search-theme-form" value="search_theme_form" type="hidden">
+</div></div>
+</div></form>
+    
+   </div>
+       <div class="breadcrumb"><a href="http://drupal.org/">Home</a> » <a href="http://drupal.org/project" title="Browse projects">Download</a> » <a href="http://drupal.org/project/Modules">Modules</a></div>    <div id="main">
+        <div id="threecol">
+         <div id="content" class="content-right"><div id="squeeze">
+            <h1 class="title node-type-project_project">Memcache API and Integration</h1>
+                                    <div class="node">
+      
+  <div class="clear-block">
+   <div class="terms"><a href="http://drupal.org/project/Modules/category/52" rel="tag" title="">3rd party integration</a> · <a href="http://drupal.org/project/Modules/category/75" rel="tag" title="">Utility</a> · <a href="http://drupal.org/project/Modules" rel="tag" title="Modules are plugins for Drupal that extend its core functionality.  Only use matching versions of modules with Drupal. Modules released for Drupal 4.7.x will not work for Drupal 5.x. These contributed modules are not part of any official release and may not be optimized or work correctly.">Modules</a></div>
+   <div class="info-page"><a href="http://drupal.org/user/5449" title="View user profile.">robertDouglass</a> - January 11, 2007 - 19:31</div>
+  </div>
+  <div class="content">
+    <p><strong>Please upgrade to the newest <a href="http://pecl.php.net/package/memcache/" rel="nofollow">PECL package (2.2.1)</a> (or higher) to avoid a bug with deletes not happening.</strong></p>
+<p>This project consists of several parts:</p>
+<ol>
+<li>An API for using <a href="http://www.danga.com/memcached/" rel="nofollow">Memcached</a> and the <a href="http://pecl.php.net/package/memcache" rel="nofollow">PECL Memcache library</a> with Drupal.</li>
+<li>"Drop-in" replacement libraries for session handling. One that uses
+memcache exclusively (session-memcache.inc) and one that uses memcache
+if available and fails over to the database if memcache becomes
+unavailable.(session-memcache-db.inc)</li>
+<li>"Drop-in" replacement library for caching (works with cache_get and cache_set).</li>
+<li>A module that provides administrative overview of Drupal's
+interaction with Memcached and logic to invalidate "dirty" cache items.</li>
+<li>A set of tests that can be run to test your memcache setup.</li>
+</ol>
+<p>This project is co-maintained by <a href="http://drupal.org/user/5449" rel="nofollow">Robert Douglass</a>, <a href="http://drupal.org/user/59351" rel="nofollow">Nicholas Thompson</a>, <a href="http://drupal.org/user/33667" rel="nofollow">Simon Roberts</a> and <a href="http://drupal.org/user/73183" rel="nofollow">Steve Rude</a>.</p>
+<h2>Installation</h2>
+<p>These are the broad steps you need to take in order to use this software. Order is important.</p>
+<ol>
+<li>Install the memcached binaries on your server. See <a href="http://www.lullabot.com/articles/how_install_memcache_debian_etch" rel="nofollow">How to install Memcache on Debian Etch</a> or <a href="http://www.lullabot.com/articles/setup-memcached-mamp-sandbox-environment" rel="nofollow">How to install Memcache on OSX</a></li>
+<li>Install the PECL memcache extension for PHP.</li>
+<li>Put your site into offline mode.</li>
+<li>Download and install the memcache module.</li>
+<li>If you have previously been running the memcache module, run update.php.</li>
+<li>Apply the DRUPAL-5-cache-serialize.patch that comes with the module to your Drupal installation.</li>
+<li>Start at least one instance of memcached on your server.</li>
+<li>Edit settings.php to configure the servers, clusters and bins that memcache is supposed to use.</li>
+<li>Edit settings.php to include either memcache.inc or
+memcache.db.inc. For example, $conf['cache_inc']
+='sites/all/modules/memcache/memcache.db.inc';</li>
+<li>Bring your site back online.</li>
+</ol>
+<p>For instructions on 1 and 2 above, please see the INSTALLATION.txt file that comes with the memcache module download.</p>
+<p>Either the memcache.inc or the memcache.db.inc file is intended to
+be used instead of cache.inc, utilizing Drupal's pluggable cache
+system. The .db.inc variant saves all data to the database as well, so
+the site will still have the performance benefits of cache even if you
+take your memcache offline. The site should not ever break due to
+memcache not being available... it is only a question of whether
+caching is still available or not. The memcache.inc file doesn't save
+any data to the database and thus has the biggest potential for
+increasing your site's performance. If you use this file it is
+important to have enough memory allocated to memcache to store
+everything (including the page cache), otherwise the cache misses will
+negate the benefit of the cache hits.</p>
+<p>Update $conf in settings.php to tell Drupal which cache_inc file to use:</p>
+<p></p><div class="codeblock"><code><span style="color: rgb(0, 0, 0);"><span style="color: rgb(0, 0, 187);">&lt;?php<br> $conf </span><span style="color: rgb(0, 119, 0);">= array(<br>&nbsp;&nbsp; </span><span style="color: rgb(255, 128, 0);">// The path to wherever memcache.inc is. The easiest is to simply point it<br>&nbsp;&nbsp; // to the copy in your module's directory.<br>&nbsp;&nbsp; </span><span style="color: rgb(221, 0, 0);">'cache_inc' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'./sites/all/modules/memcache/memcache.inc'</span><span style="color: rgb(0, 119, 0);">,<br>&nbsp;&nbsp; </span><span style="color: rgb(255, 128, 0);">// or<br>&nbsp;&nbsp; // 'cache_inc' =&gt; './sites/all/modules/memcache/memcache.db.inc',<br> </span><span style="color: rgb(0, 119, 0);">);<br></span><span style="color: rgb(0, 0, 187);">?&gt;</span></span></code></div>
+<h2>Servers</h2>
+<p>If you want the simple version, you can start one default memcache
+instance on your web server like this: memcached -m 24 -p 11211 -d If
+that is enough to meet your needs, there is no more configuration
+needed. If you want to utilize this module's sophisticated clustering
+feature and spread your cache over several machines, or if your cache
+is found on a machine other than your web server, read on.</p>
+<p>The available memcached servers are specified in $conf in
+settings.php. If you do not specify any servers, memcache.inc assumes
+that you have a memcached instance running on localhost:11211. If this
+is true, and it is the only memcached instance you wish to use, no
+further configuration is required.</p>
+<p>If you have more than one memcached instance running, you need to add two arrays to <code>$conf;</code> memcache_servers and memcache_bins. The arrays follow this pattern:<br>
+</p><div class="codeblock"><code>'memcache_servers' =&gt; array(host1:port =&gt; cluster, host2:port =&gt; cluster, hostN:port =&gt; cluster)<br>'memcache_bins' =&gt; array(bin1 =&gt; cluster, bin2 =&gt; cluster, binN =&gt; cluster)</code></div>
+<p>The bin/cluster/server model can be described as follows:</p>
+<ul>
+<li>Servers are memcached instances identified by host:port.</li>
+<li>Bins are groups of data that get cached together and map 1:1 to the
+$table param in cache_set(). Examples from Drupal core are
+cache_filter, cache_menu. The default is 'cache'.
+</li><li>Clusters are groups of servers that act as a memory pool.</li>
+<li>Many bins can be assigned to a cluster.</li>
+<li>The default cluster is 'default'.</li>
+</ul>
+<p>Here is a simple setup that has two memcached instances, both
+running on localhost. The 11212 instance belongs to the 'pages' cluster
+and the table cache_page is mapped to the 'pages' cluster. Thus
+everything that gets cached, with the exception of the page cache
+(cache_page), will be put into 'default', or the 11211 instance. The
+page cache will be in 11212.<br>
+</p><div class="codeblock"><code><span style="color: rgb(0, 0, 0);"><span style="color: rgb(0, 0, 187);">&lt;?php<br>$conf </span><span style="color: rgb(0, 119, 0);">= array(<br>&nbsp; </span><span style="color: rgb(221, 0, 0);">'memcache_servers' </span><span style="color: rgb(0, 119, 0);">=&gt; array(</span><span style="color: rgb(221, 0, 0);">'localhost:11211' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'default'</span><span style="color: rgb(0, 119, 0);">,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span style="color: rgb(221, 0, 0);">'localhost:11212' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'pages'</span><span style="color: rgb(0, 119, 0);">),<br>&nbsp; </span><span style="color: rgb(221, 0, 0);">'memcache_bins' </span><span style="color: rgb(0, 119, 0);">=&gt; array(</span><span style="color: rgb(221, 0, 0);">'cache_page' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'pages'</span><span style="color: rgb(0, 119, 0);">),<br>);<br></span><span style="color: rgb(0, 0, 187);">?&gt;</span></span></code></div>
+<p>Here is an example configuration that has two clusters, 'default'
+and 'cluster2'. Five memcached instances are divided up between the two
+clusters. 'cache_filter' and 'cache_menu' bins goe to 'cluster2'. All
+other bins go to 'default'.<br>
+</p><div class="codeblock"><code><span style="color: rgb(0, 0, 0);"><span style="color: rgb(0, 0, 187);">&lt;?php<br>$conf </span><span style="color: rgb(0, 119, 0);">= array(<br>&nbsp; </span><span style="color: rgb(221, 0, 0);">'cache_inc' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'./includes/memcache.inc'</span><span style="color: rgb(0, 119, 0);">,<br>&nbsp; </span><span style="color: rgb(221, 0, 0);">'memcache_servers' </span><span style="color: rgb(0, 119, 0);">=&gt; array(</span><span style="color: rgb(221, 0, 0);">'localhost:11211' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'default'</span><span style="color: rgb(0, 119, 0);">,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span style="color: rgb(221, 0, 0);">'localhost:11212' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'default'</span><span style="color: rgb(0, 119, 0);">,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span style="color: rgb(221, 0, 0);">'123.45.67.890:11211' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'default'</span><span style="color: rgb(0, 119, 0);">,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span style="color: rgb(221, 0, 0);">'123.45.67.891:11211' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'cluster2'</span><span style="color: rgb(0, 119, 0);">,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span style="color: rgb(221, 0, 0);">'123.45.67.892:11211' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'cluster2'</span><span style="color: rgb(0, 119, 0);">),<br><br>&nbsp; </span><span style="color: rgb(221, 0, 0);">'memcache_bins' </span><span style="color: rgb(0, 119, 0);">=&gt; array(</span><span style="color: rgb(221, 0, 0);">'cache' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'default'</span><span style="color: rgb(0, 119, 0);">,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span style="color: rgb(221, 0, 0);">'cache_filter' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'cluster2'</span><span style="color: rgb(0, 119, 0);">,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+</span><span style="color: rgb(221, 0, 0);">'cache_menu' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'cluster2'</span><span style="color: rgb(0, 119, 0);">),<br>);<br></span><span style="color: rgb(0, 0, 187);">?&gt;</span></span></code></div>
+<h2>Prefixing</h2>
+<p>If you want to have multiple Drupal installations share memcached
+instances, you need to include a unique prefix for each Drupal
+installation in the <code>$conf</code> array of settings.php:<br>
+</p><div class="codeblock"><code><span style="color: rgb(0, 0, 0);"><span style="color: rgb(0, 0, 187);">&lt;?php<br>$conf </span><span style="color: rgb(0, 119, 0);">= array(<br>&nbsp; </span><span style="color: rgb(221, 0, 0);">'memcache_key_prefix' </span><span style="color: rgb(0, 119, 0);">=&gt; </span><span style="color: rgb(221, 0, 0);">'something_unique'</span><span style="color: rgb(0, 119, 0);">,<br>);<br></span><span style="color: rgb(0, 0, 187);">?&gt;</span></span></code></div>
+<h2>Patches</h2>
+<p>The DRUPAL-5-cache-serialize.patch must be applied to your Drupal
+installation for this software to work. The patch depends on a column
+that needs to get added to all of the existing cache tables for your
+site. This column has been introduced in the DRUPAL-6 development
+branch so this patch is future-safe if you ever upgrade to DRUPAL-6. To
+actually add the column to your database, you need to either install
+the memcache.module, or, if it is already installed and you are
+updating to this version, run update.php. Either installing the module
+or running update.php will add the needed column, Uninstalling the
+module will remove the column.</p>
+<h2>Troubleshooting</h2>
+<p>  ProblemSolution</p>
+<p> Warning: require_once(a) [function.require-once]: failed to open
+stream: No such file or directory in /includes/bootstrap.inc on line 853<br>
+This error occurs after you apply the DRUPAL-5-cache-serialize.patch
+because the code in the patch now expects the cached variables to be
+unserialized but they are still serialized in the cache. Clear the
+cache table:<br>
+      </p><div class="codeblock"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; mysql&gt; TRUNCATE cache;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Query OK, 0 rows affected (0.01 sec)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </code></div>
+<p>    Fatal error: Cannot use string offset as an array in includes/menu.inc on line 452<br>
+Similar to the error above, this occurs after applying the
+DRUPAL-5-cache-serialize.patch due to the conflict between the existing
+cached menu and what the patched code is expecting. Clear cache_menu:<br>
+      </p><div class="codeblock"><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; mysql&gt; TRUNCATE cache_menu;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Query OK, 0 rows affected (0.33 sec)<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </code></div>
+<p>    Error: Failed to set key: Failed to set key: cache_page-......<br>
+    Upgrade your PECL library to <a href="http://pecl.php.net/package/memcache/" rel="nofollow">PECL package (2.2.1)</a> (or higher).</p>
+<h2>Memcahe Admin</h2>
+<p>A module offering a UI for memcache is on the way. It will provide
+stats, a way to clear the cache, and an interface to organize
+servers/bins/clusters.</p>
+<h3>Releases</h3><table class="releases">
+ <thead><tr><th class="release-title">Official releases</th><th class="release-date">Date</th><th class="release-size">Size</th><th class="release-links">Links</th> </tr></thead>
+<tbody>
+ <tr class="release odd"><td class="release-title"><a href="http://drupal.org/node/215654">5.x-1.7</a></td><td class="release-date">2008-Jan-29</td><td class="release-size">23.81 KB</td><td class="release-links"><a href="http://ftp.drupal.org/files/projects/memcache-5.x-1.7.tar.gz">Download</a> · <a href="http://drupal.org/node/215654">Release notes</a></td> </tr>
+</tbody></table>
+<table class="releases">
+ <thead><tr><th class="release-title">Development snapshots</th><th class="release-date">Date</th><th class="release-size">Size</th><th class="release-links">Links</th> </tr></thead>
+<tbody>
+ <tr class="release-dev odd"><td class="release-title"><a href="http://drupal.org/node/116481">5.x-1.x-dev</a></td><td class="release-date">2008-Jan-29</td><td class="release-size">23.46 KB</td><td class="release-links"><a href="http://ftp.drupal.org/files/projects/memcache-5.x-1.x-dev.tar.gz">Download</a> · <a href="http://drupal.org/node/116481">Release notes</a></td> </tr>
+</tbody></table>
+<div class="item-list"><ul><li><a href="http://drupal.org/node/108642/release">View all releases</a></li></ul></div><div class="item-list"><h3>Support</h3><ul><li><a href="http://drupal.org/project/issues/memcache?categories=support&amp;states=all">View all support requests</a></li><li><a href="http://drupal.org/project/issues/memcache?categories=support">View pending support requests</a></li><li><a href="http://drupal.org/project/issues/memcache?categories=bug">View pending bug reports</a></li><li><a href="http://drupal.org/project/issues/memcache?categories=feature">View pending feature requests</a></li><li><a href="http://drupal.org/user/login?destination=node/add/project-issue/memcache">Login</a> or <a href="http://drupal.org/user/register?destination=node/add/project-issue/memcache">register</a> to create an issue</li></ul></div><div class="item-list"><h3>Development</h3><ul><li><a href="http://drupal.org/project/issues/memcache?states=8,13,14">View pending patches</a></li><li><a href="http://drupal.org/project/issues/memcache?categories=task">View available tasks</a></li><li><a href="http://drupal.org/project/issues/memcache">View all pending issues</a></li><li><a href="http://cvs.drupal.org/viewcvs/drupal/contributions/modules/memcache">Browse the CVS repository</a></li><li><a href="http://drupal.org/project/cvs/108642">View CVS messages</a></li><li><a href="http://drupal.org/project/developers/108642">Developers</a></li></ul></div>  </div>
+</div>
+           </div></div>
+             </div>
+    <div id="sidebar-right" class="sidebar">
+     <div class="block block-user" id="block-user-0">
+  <h2><span class="w1"><span class="w2">User login</span></span></h2>
+  <div class="content"><div class="w1"><div class="w2"><form action="/project/memcache?destination=node%2F108642" accept-charset="UTF-8" method="post" id="user-login-form">
+<div><div class="form-item">
+ <label for="edit-name">Username: <span class="form-required" title="This field is required.">*</span></label>
+ <input maxlength="60" name="name" id="edit-name" size="15" value="" class="form-text required" type="text">
+</div>
+<div class="form-item">
+ <label for="edit-pass">Password: <span class="form-required" title="This field is required.">*</span></label>
+ <input name="pass" id="edit-pass" maxlength="60" size="15" class="form-text required" type="password">
+</div>
+<input name="op" id="edit-submit" value="Log in" class="form-submit" type="submit">
+<div class="item-list"><ul><li><a href="http://drupal.org/user/register" title="Create a new user account.">Create new account</a></li><li><a href="http://drupal.org/user/password" title="Request new password via e-mail.">Request new password</a></li></ul></div><input name="form_id" id="edit-user-login-block" value="user_login_block" type="hidden">
+
+</div></form>
+</div></div></div>
+</div>
+    </div>
+       </div>
+   <div id="footer1">&nbsp;</div>
+   <div id="footer2">&nbsp;<p>Drupal is a registered trademark of <a href="http://buytaert.net/">Dries Buytaert</a>.</p>
+ </div>
+   
+   
+  </div>
+ </body></html>
